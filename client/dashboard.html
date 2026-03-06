@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SOPHIA-ACADEMY HR</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Using Phosphor Icons for premium look -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-text">SOPHIA-ACADEMY HR</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="ph ph-squares-four nav-icon"></i>
+                    Dashboard
+                </a>
+                <a href="emp.html" class="nav-item">
+                    <i class="ph ph-users nav-icon"></i>
+                    Employees
+                </a>
+                <a href="attendance.html" class="nav-item">
+                    <i class="ph ph-calendar-check nav-icon"></i>
+                    Attendance
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <i class="ph ph-briefcase nav-icon"></i>
+                    Leaves
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Header -->
+            <header class="top-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="ph ph-list"></i>
+                </button>
+
+                <div class="header-right" style="margin-left: auto;">
+                    <button class="btn btn-outline"
+                        style="border: none; border-radius: 50%; width: 40px; height: 40px; padding: 0; color: var(--text-muted); display: flex; align-items: center; justify-content: center; position: relative;">
+                        <i class="ph ph-bell" style="font-size: 20px;"></i>
+                        <span
+                            style="position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; background-color: var(--danger); border-radius: 50%;"></span>
+                    </button>
+                    <div class="user-profile" style="cursor: pointer;">
+                        <div class="avatar">AD</div>
+                        <div class="user-info" style="display: flex; flex-direction: column;">
+                            <span class="name">Admin User</span>
+                            <span class="role">HR Manager</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="content-area">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Dashboard Overview</h1>
+                        <p class="page-subtitle">Welcome back, here's what's happening today.</p>
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="ph ph-download-simple"></i>
+                        Generate Report
+                    </button>
+                </div>
+
+                <!-- Stats Grid -->
+                <!-- We do inline CSS here for grid structural stuff that might be generic, or we can use generic utility classes. Let's use generic flex/grid where applicable -->
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                    <!-- Stat Card 1 -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <p class="text-muted fw-semibold"
+                                        style="font-size: 13px; text-transform: uppercase;">Total Employees</p>
+                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">124</h2>
+                                </div>
+                                <div
+                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    <i class="ph ph-users-three"></i>
+                                </div>
+                            </div>
+                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                <span class="text-success fw-semibold"><i class="ph ph-trend-up"></i> +4</span>
+                                <span class="text-muted"> vs last month</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Stat Card 2 -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <p class="text-muted fw-semibold"
+                                        style="font-size: 13px; text-transform: uppercase;">Today's Attendance</p>
+                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">118<span
+                                            style="font-size: 18px; color: var(--text-muted); font-weight: 500;">/124</span>
+                                    </h2>
+                                </div>
+                                <div
+                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    <i class="ph ph-user-check"></i>
+                                </div>
+                            </div>
+                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                <span class="text-success fw-semibold">95%</span>
+                                <span class="text-muted"> presence rate</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Stat Card 3 -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <p class="text-muted fw-semibold"
+                                        style="font-size: 13px; text-transform: uppercase;">Employees on Leave</p>
+                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">6</h2>
+                                </div>
+                                <div
+                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--warning-bg); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    <i class="ph ph-calendar-x"></i>
+                                </div>
+                            </div>
+                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                <span class="text-danger fw-semibold">2 Pending</span>
+                                <span class="text-muted"> approval requests</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity & Chart placeholder -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
+                    <!-- Table Area -->
+                    <div class="card" style="grid-column: span 2; @media (max-width: 900px) { grid-column: span 1; }">
+                        <div class="card-body">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Recent Hirings</h3>
+                                <a href="emp.html" class="btn btn-outline"
+                                    style="padding: 6px 12px; font-size: 12px;">View All</a>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table" style="margin-bottom: 0;">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Role</th>
+                                            <th>Department</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-center gap-3">
+                                                    <div class="avatar"
+                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                                                        SJ</div>
+                                                    <div>
+                                                        <div class="fw-semibold text-main">Sarah Jenkins</div>
+                                                        <div class="text-muted" style="font-size: 12px;">
+                                                            sarah.j@company.com</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="vertical-align: middle;">Product Designer</td>
+                                            <td style="vertical-align: middle;">Design</td>
+                                            <td style="vertical-align: middle;"><span
+                                                    class="badge badge-success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-center gap-3">
+                                                    <div class="avatar"
+                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(16, 185, 129, 0.1); color: var(--success);">
+                                                        MW</div>
+                                                    <div>
+                                                        <div class="fw-semibold text-main">Michael Wong</div>
+                                                        <div class="text-muted" style="font-size: 12px;">
+                                                            m.wong@company.com</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="vertical-align: middle;">Frontend Dev</td>
+                                            <td style="vertical-align: middle;">Engineering</td>
+                                            <td style="vertical-align: middle;"><span
+                                                    class="badge badge-success">Active</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-center gap-3">
+                                                    <div class="avatar"
+                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                                        EL</div>
+                                                    <div>
+                                                        <div class="fw-semibold text-main">Emma Larson</div>
+                                                        <div class="text-muted" style="font-size: 12px;">
+                                                            emma.l@company.com</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="vertical-align: middle;">HR Specialist</td>
+                                            <td style="vertical-align: middle;">Human Resources</td>
+                                            <td style="vertical-align: middle;"><span
+                                                    class="badge badge-warning">Onboarding</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Area -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 20px;">Upcoming
+                                Events</h3>
+
+                            <div style="display: flex; flex-direction: column; gap: 16px;">
+                                <!-- Item 1 -->
+                                <div
+                                    style="display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                                    <div
+                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--primary-light); color: var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <span
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
+                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">12</span>
+                                    </div>
+                                    <div>
+                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
+                                            David Chen's Birthday</p>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Engineering Dept</p>
+                                    </div>
+                                </div>
+
+                                <!-- Item 2 -->
+                                <div
+                                    style="display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                                    <div
+                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--warning-bg); color: #d97706; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <span
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
+                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">14</span>
+                                    </div>
+                                    <div>
+                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
+                                            Annual Leave Started</p>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Jessica Miller (3
+                                            days)</p>
+                                    </div>
+                                </div>
+
+                                <!-- Item 3 -->
+                                <div style="display: flex; gap: 16px;">
+                                    <div
+                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--success-bg); color: var(--success); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        <span
+                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
+                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">18</span>
+                                    </div>
+                                    <div>
+                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
+                                            Company Townhall</p>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">All Staff • Conference
+                                            Room</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+
+</html>

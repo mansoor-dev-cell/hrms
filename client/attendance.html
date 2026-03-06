@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance - SOPHIA-ACADEMY HR</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-text">SOPHIA-ACADEMY HR</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="ph ph-squares-four nav-icon"></i>
+                    Dashboard
+                </a>
+                <a href="emp.html" class="nav-item">
+                    <i class="ph ph-users nav-icon"></i>
+                    Employees
+                </a>
+                <a href="attendance.html" class="nav-item active">
+                    <i class="ph ph-calendar-check nav-icon"></i>
+                    Attendance
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <i class="ph ph-briefcase nav-icon"></i>
+                    Leaves
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Header -->
+            <header class="top-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="ph ph-list"></i>
+                </button>
+
+                <div class="header-right" style="margin-left: auto;">
+                    <button class="btn btn-outline"
+                        style="border: none; border-radius: 50%; width: 40px; height: 40px; padding: 0; color: var(--text-muted); display: flex; align-items: center; justify-content: center; position: relative;">
+                        <i class="ph ph-bell" style="font-size: 20px;"></i>
+                    </button>
+                    <div class="user-profile" style="cursor: pointer;">
+                        <div class="avatar">AD</div>
+                        <div class="user-info" style="display: flex; flex-direction: column;">
+                            <span class="name">Admin User</span>
+                            <span class="role">HR Manager</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="content-area">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Attendance Tracking</h1>
+                        <p class="page-subtitle">Monitor and manage daily team attendance records.</p>
+                    </div>
+                    <div style="display: flex; gap: 12px;">
+                        <button class="btn btn-outline">
+                            <i class="ph ph-export"></i>
+                            Export Data
+                        </button>
+                        <button class="btn btn-primary" data-open-modal="markAttendanceModal">
+                            <i class="ph ph-plus"></i>
+                            Mark Entry
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Today Overview -->
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                    <div class="card" style="border-top: 4px solid var(--primary);">
+                        <div class="card-body" style="padding: 20px; text-align: center;">
+                            <h3 class="text-muted"
+                                style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Total Employees
+                            </h3>
+                            <h2 style="font-size: 32px; font-weight: 700; margin: 12px 0 0;">124</h2>
+                        </div>
+                    </div>
+                    <div class="card" style="border-top: 4px solid var(--success);">
+                        <div class="card-body" style="padding: 20px; text-align: center;">
+                            <h3 class="text-muted"
+                                style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Present Today</h3>
+                            <h2 style="font-size: 32px; font-weight: 700; color: var(--success); margin: 12px 0 0;">118
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="card" style="border-top: 4px solid var(--danger);">
+                        <div class="card-body" style="padding: 20px; text-align: center;">
+                            <h3 class="text-muted"
+                                style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Absent Today</h3>
+                            <h2 style="font-size: 32px; font-weight: 700; color: var(--danger); margin: 12px 0 0;">3
+                            </h2>
+                        </div>
+                    </div>
+                    <div class="card" style="border-top: 4px solid var(--warning);">
+                        <div class="card-body" style="padding: 20px; text-align: center;">
+                            <h3 class="text-muted"
+                                style="font-size: 13px; font-weight: 600; text-transform: uppercase;">Late Arrivals</h3>
+                            <h2 style="font-size: 32px; font-weight: 700; color: #d97706; margin: 12px 0 0;">3</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters & Controls for Records -->
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-body" style="padding: 16px 24px;">
+                        <div
+                            style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Attendance Log</h3>
+                            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label class="text-muted"
+                                        style="font-size: 14px; white-space: nowrap;">Date:</label>
+                                    <input type="date" class="form-control" style="margin: 0; padding: 6px 12px;"
+                                        value="2026-03-05">
+                                </div>
+                                <div style="width: 200px; position: relative;">
+                                    <i class="ph ph-magnifying-glass"
+                                        style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                    <input type="text" class="form-control" placeholder="Search employee..."
+                                        style="padding-left: 44px; margin: 0;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Records Table -->
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Status</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Record 1 -->
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar"
+                                                style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(79, 70, 229, 0.1); color: var(--primary);">
+                                                JD</div>
+                                            <div>
+                                                <div class="fw-semibold text-main">John Doe</div>
+                                                <div class="text-muted" style="font-size: 12px;">Engineering</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">Mar 05, 2026</td>
+                                    <td style="vertical-align: middle;" class="fw-semibold">08:45 AM</td>
+                                    <td style="vertical-align: middle;" class="text-muted">--:--</td>
+                                    <td style="vertical-align: middle;"><span class="badge badge-success">Present</span>
+                                    </td>
+                                    <td style="vertical-align: middle;" class="text-muted">-</td>
+                                </tr>
+
+                                <!-- Record 2 -->
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar"
+                                                style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(16, 185, 129, 0.1); color: var(--success);">
+                                                SJ</div>
+                                            <div>
+                                                <div class="fw-semibold text-main">Sarah Jenkins</div>
+                                                <div class="text-muted" style="font-size: 12px;">Design</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">Mar 05, 2026</td>
+                                    <td style="vertical-align: middle;" class="text-muted">--:--</td>
+                                    <td style="vertical-align: middle;" class="text-muted">--:--</td>
+                                    <td style="vertical-align: middle;"><span class="badge badge-danger">Absent</span>
+                                    </td>
+                                    <td style="vertical-align: middle;" class="text-muted">Sick Leave</td>
+                                </tr>
+
+                                <!-- Record 3 -->
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar"
+                                                style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                                MW</div>
+                                            <div>
+                                                <div class="fw-semibold text-main">Michael Wong</div>
+                                                <div class="text-muted" style="font-size: 12px;">Engineering</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">Mar 05, 2026</td>
+                                    <td style="vertical-align: middle;" class="text-warning fw-semibold">09:30 AM</td>
+                                    <td style="vertical-align: middle;" class="text-muted">--:--</td>
+                                    <td style="vertical-align: middle;"><span class="badge badge-warning">Late</span>
+                                    </td>
+                                    <td style="vertical-align: middle;" class="text-muted">Traffic delay</td>
+                                </tr>
+
+                                <!-- Record 4 -->
+                                <tr style="background-color: rgba(248, 250, 252, 0.8);">
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar"
+                                                style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                                                EL</div>
+                                            <div>
+                                                <div class="fw-semibold text-main">Emma Larson</div>
+                                                <div class="text-muted" style="font-size: 12px;">HR</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">Mar 04, 2026</td>
+                                    <td style="vertical-align: middle;">09:00 AM</td>
+                                    <td style="vertical-align: middle;">05:15 PM</td>
+                                    <td style="vertical-align: middle;"><span class="badge badge-success">Present</span>
+                                    </td>
+                                    <td style="vertical-align: middle;" class="text-muted">-</td>
+                                </tr>
+
+                                <!-- Record 5 -->
+                                <tr style="background-color: rgba(248, 250, 252, 0.8);">
+                                    <td>
+                                        <div class="d-flex align-center gap-3">
+                                            <div class="avatar"
+                                                style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                                                DC</div>
+                                            <div>
+                                                <div class="fw-semibold text-main">David Chen</div>
+                                                <div class="text-muted" style="font-size: 12px;">Engineering</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="vertical-align: middle;">Mar 04, 2026</td>
+                                    <td style="vertical-align: middle;">08:50 AM</td>
+                                    <td style="vertical-align: middle;">06:30 PM</td>
+                                    <td style="vertical-align: middle;"><span class="badge badge-success">Present</span>
+                                    </td>
+                                    <td style="vertical-align: middle;" class="text-muted">Overtime 1h</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="padding: 16px 24px; border-top: 1px solid var(--border); text-align: center;">
+                        <button class="btn btn-outline" style="font-size: 14px;">Load More Records</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Mark Attendance Modal -->
+    <div class="modal-overlay" id="markAttendanceModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Manual Attendance Entry</h2>
+                <button class="modal-close"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="attendanceForm">
+                    <div class="form-group">
+                        <label class="form-label">Employee</label>
+                        <select class="form-control" required>
+                            <option value="" disabled selected>Search & Select Employee...</option>
+                            <option value="1">John Doe - Engineering</option>
+                            <option value="2">Sarah Jenkins - Design</option>
+                            <option value="3">Michael Wong - Engineering</option>
+                            <option value="4">Emma Larson - HR</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Date</label>
+                            <input type="date" class="form-control" required value="2026-03-05">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" required>
+                                <option value="present">Present</option>
+                                <option value="absent">Absent</option>
+                                <option value="late">Late</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Check In Time</label>
+                            <input type="time" class="form-control">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Check Out Time</label>
+                            <input type="time" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label class="form-label">Notes/Reason</label>
+                        <textarea class="form-control" rows="2" placeholder="Optional details..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-close-modal>Cancel</button>
+                <button class="btn btn-primary" onclick="document.getElementById('attendanceForm').submit()">Save
+                    Record</button>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>
