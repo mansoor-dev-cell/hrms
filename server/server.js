@@ -4,6 +4,11 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
+// code  (Type : comon js ) :
+const dns = require("dns");
+// Change DNS
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
 const Admin = require("./models/admin");
 
 const app = express();
