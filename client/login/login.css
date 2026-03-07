@@ -1,0 +1,289 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Variables (mirrors style.css) ── */
+:root {
+    --primary:       #455559;
+    --primary-hover: #3d4c4f;
+    --primary-light: #e4ebea;
+    --bg-main:       #f3f5f4;
+    --bg-surface:    #ffffff;
+    --border:        #dde3e1;
+    --text-main:     #2e383a;
+    --text-muted:    #6c7a7d;
+    --text-inverse:  #ffffff;
+    --danger:        #a14b4b;
+    --danger-bg:     #f3e2e2;
+    --radius-md:     12px;
+    --radius-lg:     20px;
+    --shadow-lg:     0 12px 20px rgba(0,0,0,0.12);
+    --transition:    all 0.3s ease;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Page wrapper ── */
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: 40px 16px;
+    width: 100%;
+}
+
+/* ── Brand Header ── */
+.brand-header {
+    text-align: center;
+}
+
+.brand-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-main);
+    text-transform: uppercase;
+}
+
+.brand-subtitle {
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* ── Card ── */
+.login-card {
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 40px 36px 36px;
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    transition: var(--transition);
+}
+
+/* ── Card Icon ── */
+.card-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.card-icon i {
+    font-size: 30px;
+    color: var(--primary);
+}
+
+/* ── Card Text ── */
+.card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.card-desc {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 340px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+}
+
+/* ── Role Buttons ── */
+.role-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+/* ── Buttons ── */
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--text-inverse);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(69, 85, 89, 0.25);
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--text-main);
+    border: 1.5px solid var(--border);
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.btn.full-width { width: 100%; }
+
+.btn-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* ── Forms ── */
+.login-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.login-form.hidden { display: none; }
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-main);
+}
+
+/* Input wrapper */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 13px;
+    font-size: 18px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.input-wrapper input {
+    width: 100%;
+    padding: 12px 44px 12px 40px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    background: var(--bg-main);
+    outline: none;
+    transition: var(--transition);
+}
+
+.input-wrapper input:focus {
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(69, 85, 89, 0.12);
+}
+
+.input-wrapper input::placeholder {
+    color: #a0adb0;
+}
+
+/* password toggle */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    font-size: 17px;
+    transition: color 0.2s;
+}
+
+.toggle-password:hover { color: var(--primary); }
+
+/* ── Error message ── */
+.error-msg {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    font-weight: 500;
+}
+
+.error-msg.hidden { display: none; }
+
+/* ── Back link ── */
+.btn-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    margin-top: 4px;
+    transition: color 0.2s;
+}
+
+.btn-link:hover { color: var(--primary); }
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+    .login-card { padding: 32px 22px 30px; }
+    .brand-title { font-size: 1.1rem; }
+}

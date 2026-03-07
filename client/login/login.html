@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In – SOPHIA-ACADEMY HR</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="login.css" />
+</head>
+
+<body>
+
+    <div class="page-wrapper">
+
+        <!-- ── Brand Header ── -->
+        <header class="brand-header">
+            <h1 class="brand-title">SOPHIA-ACADEMY</h1>
+            <p class="brand-subtitle">Welcome back 🤗</p>
+        </header>
+
+        <!-- ── Login Card ── -->
+        <main class="login-card" id="loginCard">
+
+            <!-- Icon -->
+            <div class="card-icon">
+                <i class="ph ph-shield-check"></i>
+            </div>
+
+            <!-- Heading -->
+            <h2 class="card-title" id="cardTitle">Sign In</h2>
+            <p class="card-desc" id="cardDesc">
+                Access your dashboard to manage human resources or view your personal profile.
+            </p>
+
+            <!-- Role Selection (default view) -->
+            <div class="role-buttons" id="roleSelection">
+                <button class="btn btn-primary" id="adminBtn">
+                    <i class="ph ph-user-circle-gear btn-icon"></i>
+                    Login as Admin
+                </button>
+                <button class="btn btn-outline" id="employeeBtn">
+                    <i class="ph ph-user btn-icon"></i>
+                    Login as Employee
+                </button>
+            </div>
+
+            <!-- Admin Login Form (hidden by default) -->
+            <form class="login-form hidden" id="adminForm" novalidate>
+                <div class="form-group">
+                    <label for="adminUsername">Username</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-user input-icon"></i>
+                        <input type="text" id="adminUsername" placeholder="Enter admin username" autocomplete="username" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="adminPassword">Password</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-lock input-icon"></i>
+                        <input type="password" id="adminPassword" placeholder="Enter password" autocomplete="current-password" />
+                        <button type="button" class="toggle-password" aria-label="Show/hide password">
+                            <i class="ph ph-eye" id="adminEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="error-msg hidden" id="adminError">
+                    <i class="ph ph-warning-circle"></i>
+                    <span id="adminErrorText">Invalid credentials.</span>
+                </div>
+                <button type="submit" class="btn btn-primary full-width">
+                    <i class="ph ph-sign-in btn-icon"></i>
+                    Sign In as Admin
+                </button>
+                <button type="button" class="btn-link" id="adminBack">
+                    <i class="ph ph-arrow-left"></i> Back
+                </button>
+            </form>
+
+            <!-- Employee Login Form (hidden by default) -->
+            <form class="login-form hidden" id="employeeForm" novalidate>
+                <div class="form-group">
+                    <label for="empId">Employee ID</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-identification-badge input-icon"></i>
+                        <input type="text" id="empId" placeholder="Enter your employee ID" autocomplete="username" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="empPassword">Password</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-lock input-icon"></i>
+                        <input type="password" id="empPassword" placeholder="Enter password" autocomplete="current-password" />
+                        <button type="button" class="toggle-password" aria-label="Show/hide password">
+                            <i class="ph ph-eye" id="empEyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="error-msg hidden" id="empError">
+                    <i class="ph ph-warning-circle"></i>
+                    <span id="empErrorText">Invalid credentials.</span>
+                </div>
+                <button type="submit" class="btn btn-primary full-width">
+                    <i class="ph ph-sign-in btn-icon"></i>
+                    Sign In as Employee
+                </button>
+                <button type="button" class="btn-link" id="empBack">
+                    <i class="ph ph-arrow-left"></i> Back
+                </button>
+            </form>
+
+        </main>
+
+    </div>
+
+    <script src="login.js"></script>
+</body>
+
+</html>
