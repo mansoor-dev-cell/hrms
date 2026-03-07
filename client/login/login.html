@@ -7,109 +7,275 @@
     <title>Sign In – SOPHIA-ACADEMY HR</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="login.css" />
 </head>
 
 <body>
 
+    <div class="auth-layout">
+
+        <!-- ══ LEFT PANEL ══ -->
+        <aside class="hero-panel">
+            <!-- Decorative blobs -->
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+
+            <div class="hero-content">
+                <div class="hero-logo">
+                    <i class="ph ph-shield-check hero-logo-icon"></i>
+                </div>
+                <h1 class="hero-title">SOPHIA-ACADEMY</h1>
+                <p class="hero-sub">Human Resources Management System</p>
+
+                <ul class="hero-features">
+                    <li><i class="ph ph-check-circle"></i> Employee records & profiles</li>
+                    <li><i class="ph ph-check-circle"></i> Attendance tracking</li>
+                    <li><i class="ph ph-check-circle"></i> Leave management</li>
+                    <li><i class="ph ph-check-circle"></i> HR dashboard & analytics</li>
+                </ul>
+            </div>
+
+            <p class="hero-footer">&copy; 2026 Sophia Academy. All rights reserved.</p>
+        </aside>
+
+        <!-- ══ RIGHT PANEL ══ -->
+        <main class="form-panel">
+
+            <div class="form-panel-inner">
+
+                <!-- Mobile brand (hidden on desktop) -->
+                <div class="mobile-brand">
+                    <i class="ph ph-shield-check mobile-brand-icon"></i>
+                    <span>SOPHIA-ACADEMY HR</span>
+                </div>
+
+                <h2 class="panel-title" id="panelTitle">Welcome back</h2>
+                <p class="panel-subtitle" id="panelSubtitle">Sign in to your account to continue</p>
+
+                <!-- Tab switcher -->
+                <div class="auth-tabs">
+                    <button class="tab-btn active" id="tabSignIn">Sign In</button>
+                    <button class="tab-btn" id="tabSignUp">Sign Up</button>
+                    <span class="tab-slider" id="tabSlider"></span>
+                </div>
+
+                <!-- ── Sign In Form ── -->
+                <form class="auth-form" id="signInForm" novalidate>
+
+                    <div class="form-group">
+                        <label for="siEmail">Email address</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-envelope input-icon"></i>
+                            <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="siPassword">Password</label>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock input-icon"></i>
+                            <input type="password" id="siPassword" placeholder="Enter your password" autocomplete="current-password" />
+                            <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="feedback hidden" id="siFeedback"></div>
+
+                    <button type="submit" class="btn btn-primary" id="siSubmit">
+                        <i class="ph ph-sign-in btn-icon"></i>
+                        Sign In
+                    </button>
+
+                    <p class="switch-text">
+                        Don't have an account?
+                        <button type="button" class="link-btn" id="goSignUp">Create one</button>
+                    </p>
+                </form>
+
+                <!-- ── Sign Up Form ── -->
+                <form class="auth-form hidden" id="signUpForm" novalidate>
+
+                    <div class="form-group">
+                        <label for="suName">Full Name</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-user input-icon"></i>
+                            <input type="text" id="suName" placeholder="John Doe" autocomplete="name" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suEmail">Email address</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-envelope input-icon"></i>
+                            <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suPassword">Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock input-icon"></i>
+                            <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
+                            <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                        <div class="strength-bar" id="strengthBar">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <p class="strength-label" id="strengthLabel"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="suConfirm">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock-key input-icon"></i>
+                            <input type="password" id="suConfirm" placeholder="Re-enter password" autocomplete="new-password" />
+                            <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="feedback hidden" id="suFeedback"></div>
+
+                    <button type="submit" class="btn btn-primary" id="suSubmit">
+                        <i class="ph ph-user-plus btn-icon"></i>
+                        Create Account
+                    </button>
+
+                    <p class="switch-text">
+                        Already have an account?
+                        <button type="button" class="link-btn" id="goSignIn">Sign In</button>
+                    </p>
+                </form>
+
+            </div>
+        </main>
+
+    </div>
+
+    <script src="login.js"></script>
+</body>
+
+</html>
+
     <div class="page-wrapper">
 
         <!-- ── Brand Header ── -->
         <header class="brand-header">
-            <h1 class="brand-title">SOPHIA-ACADEMY</h1>
-            <p class="brand-subtitle">Welcome back 🤗</p>
+            <h1 class="brand-title">SOPHIA-ACADEMY HR</h1>
+            <p class="brand-subtitle">Welcome back. Please sign in or create an account.</p>
         </header>
 
-        <!-- ── Login Card ── -->
-        <main class="login-card" id="loginCard">
+        <!-- ── Auth Card ── -->
+        <main class="login-card">
 
             <!-- Icon -->
             <div class="card-icon">
                 <i class="ph ph-shield-check"></i>
             </div>
 
-            <!-- Heading -->
-            <h2 class="card-title" id="cardTitle">Sign In</h2>
-            <p class="card-desc" id="cardDesc">
-                Access your dashboard to manage human resources or view your personal profile.
-            </p>
-
-            <!-- Role Selection (default view) -->
-            <div class="role-buttons" id="roleSelection">
-                <button class="btn btn-primary" id="adminBtn">
-                    <i class="ph ph-user-circle-gear btn-icon"></i>
-                    Login as Admin
-                </button>
-                <button class="btn btn-outline" id="employeeBtn">
-                    <i class="ph ph-user btn-icon"></i>
-                    Login as Employee
-                </button>
+            <!-- Tab switcher -->
+            <div class="auth-tabs">
+                <button class="tab-btn active" id="tabSignIn">Sign In</button>
+                <button class="tab-btn" id="tabSignUp">Sign Up</button>
             </div>
 
-            <!-- Admin Login Form (hidden by default) -->
-            <form class="login-form hidden" id="adminForm" novalidate>
+            <!-- ── Sign In Form ── -->
+            <form class="auth-form" id="signInForm" novalidate>
+
                 <div class="form-group">
-                    <label for="adminUsername">Username</label>
+                    <label for="siEmail">Email</label>
                     <div class="input-wrapper">
-                        <i class="ph ph-user input-icon"></i>
-                        <input type="text" id="adminUsername" placeholder="Enter admin username" autocomplete="username" />
+                        <i class="ph ph-envelope input-icon"></i>
+                        <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email" />
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="adminPassword">Password</label>
+                    <label for="siPassword">Password</label>
                     <div class="input-wrapper">
                         <i class="ph ph-lock input-icon"></i>
-                        <input type="password" id="adminPassword" placeholder="Enter password" autocomplete="current-password" />
-                        <button type="button" class="toggle-password" aria-label="Show/hide password">
-                            <i class="ph ph-eye" id="adminEyeIcon"></i>
+                        <input type="password" id="siPassword" placeholder="Enter your password" autocomplete="current-password" />
+                        <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                            <i class="ph ph-eye"></i>
                         </button>
                     </div>
                 </div>
-                <div class="error-msg hidden" id="adminError">
-                    <i class="ph ph-warning-circle"></i>
-                    <span id="adminErrorText">Invalid credentials.</span>
-                </div>
-                <button type="submit" class="btn btn-primary full-width">
+
+                <div class="feedback hidden" id="siFeedback"></div>
+
+                <button type="submit" class="btn btn-primary" id="siSubmit">
                     <i class="ph ph-sign-in btn-icon"></i>
-                    Sign In as Admin
+                    Sign In
                 </button>
-                <button type="button" class="btn-link" id="adminBack">
-                    <i class="ph ph-arrow-left"></i> Back
-                </button>
+
+                <p class="switch-text">
+                    Don't have an account?
+                    <button type="button" class="link-btn" id="goSignUp">Sign Up</button>
+                </p>
             </form>
 
-            <!-- Employee Login Form (hidden by default) -->
-            <form class="login-form hidden" id="employeeForm" novalidate>
+            <!-- ── Sign Up Form (hidden) ── -->
+            <form class="auth-form hidden" id="signUpForm" novalidate>
+
                 <div class="form-group">
-                    <label for="empId">Employee ID</label>
+                    <label for="suName">Full Name</label>
                     <div class="input-wrapper">
-                        <i class="ph ph-identification-badge input-icon"></i>
-                        <input type="text" id="empId" placeholder="Enter your employee ID" autocomplete="username" />
+                        <i class="ph ph-user input-icon"></i>
+                        <input type="text" id="suName" placeholder="John Doe" autocomplete="name" />
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="empPassword">Password</label>
+                    <label for="suEmail">Email</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-envelope input-icon"></i>
+                        <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="suPassword">Password</label>
                     <div class="input-wrapper">
                         <i class="ph ph-lock input-icon"></i>
-                        <input type="password" id="empPassword" placeholder="Enter password" autocomplete="current-password" />
-                        <button type="button" class="toggle-password" aria-label="Show/hide password">
-                            <i class="ph ph-eye" id="empEyeIcon"></i>
+                        <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
+                        <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                            <i class="ph ph-eye"></i>
                         </button>
                     </div>
                 </div>
-                <div class="error-msg hidden" id="empError">
-                    <i class="ph ph-warning-circle"></i>
-                    <span id="empErrorText">Invalid credentials.</span>
+
+                <div class="form-group">
+                    <label for="suConfirm">Confirm Password</label>
+                    <div class="input-wrapper">
+                        <i class="ph ph-lock-key input-icon"></i>
+                        <input type="password" id="suConfirm" placeholder="Re-enter password" autocomplete="new-password" />
+                        <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                            <i class="ph ph-eye"></i>
+                        </button>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary full-width">
-                    <i class="ph ph-sign-in btn-icon"></i>
-                    Sign In as Employee
+
+                <div class="feedback hidden" id="suFeedback"></div>
+
+                <button type="submit" class="btn btn-primary" id="suSubmit">
+                    <i class="ph ph-user-plus btn-icon"></i>
+                    Create Account
                 </button>
-                <button type="button" class="btn-link" id="empBack">
-                    <i class="ph ph-arrow-left"></i> Back
-                </button>
+
+                <p class="switch-text">
+                    Already have an account?
+                    <button type="button" class="link-btn" id="goSignIn">Sign In</button>
+                </p>
             </form>
 
         </main>
