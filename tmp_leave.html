@@ -14,8 +14,6 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="images/logo.jpeg" alt="Sophia Academy"
-                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;">
                 <div class="logo-text">SOPHIA-ACADEMY HR</div>
             </div>
             <nav class="sidebar-nav">
@@ -23,17 +21,17 @@
                     <i class="ph ph-squares-four nav-icon"></i>
                     Dashboard
                 </a>
-                <a href="emp.html" class="nav-item admin-only">
+                <a href="emp.html" class="nav-item">
                     <i class="ph ph-users nav-icon"></i>
                     Employees
                 </a>
-                <a href="attendance.html" class="nav-item admin-only">
+                <a href="attendance.html" class="nav-item">
                     <i class="ph ph-calendar-check nav-icon"></i>
                     Attendance
                 </a>
-                <a href="leave.html" class="nav-item active">
+                <a href="leaves.html" class="nav-item active">
                     <i class="ph ph-briefcase nav-icon"></i>
-                    Leave
+                    Leaves
                 </a>
             </nav>
         </aside>
@@ -187,9 +185,32 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="fw-semibold text-main">Michael Wong</div>
+                    <div class="text-muted" style="font-size: 12px;">Engineering</div>
                 </div>
-            </main>
         </div>
+        </td>
+        <td style="vertical-align: middle;">
+            <div class="fw-semibold">Unpaid Leave</div>
+            <div class="text-muted" style="font-size: 12px;">Personal matters</div>
+        </td>
+        <td style="vertical-align: middle;">
+            <div class="text-main">Feb 28, 2026</div>
+        </td>
+        <td style="vertical-align: middle;" class="fw-semibold">1 Day</td>
+        <td style="vertical-align: middle;"><span class="badge badge-danger">Rejected</span>
+        </td>
+        <td style="vertical-align: middle;">
+            <button class="btn btn-outline" style="padding: 6px; border: none; color: var(--text-muted);"><i
+                    class="ph ph-eye" style="font-size: 18px;"></i></button>
+        </td>
+        </tr>
+        </tbody>
+        </table>
+    </div>
+    </div>
+    </main>
+    </div>
     </div>
 
     <!-- Apply Leave Modal -->
@@ -200,18 +221,20 @@
                 <button class="modal-close"><i class="ph ph-x"></i></button>
             </div>
             <div class="modal-body">
+                <!-- If it's an admin applying on behalf of someone else, we show Employee select -->
                 <form id="leaveForm">
                     <div class="form-group">
                         <label class="form-label">Employee</label>
-                        <select class="form-control" id="leaveEmployee" required>
+                        <select class="form-control" required>
                             <option value="" disabled selected>Select Employee...</option>
-                            <!-- dynamically populated -->
+                            <option value="1">John Doe - Engineering</option>
+                            <option value="2">Sarah Jenkins - Design</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Leave Type</label>
-                        <select class="form-control" id="leaveType" required>
+                        <select class="form-control" required>
                             <option value="" disabled selected>Select Leave Type...</option>
                             <option value="annual">Annual Leave</option>
                             <option value="sick">Sick Leave</option>
@@ -223,25 +246,25 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div class="form-group" style="margin: 0;">
                             <label class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="leaveStartDate" required>
+                            <input type="date" class="form-control" required>
                         </div>
                         <div class="form-group" style="margin: 0;">
                             <label class="form-label">End Date</label>
-                            <input type="date" class="form-control" id="leaveEndDate" required>
+                            <input type="date" class="form-control" required>
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin: 0;">
+                    <div class="form-group">
                         <label class="form-label">Reason / Notes</label>
-                        <textarea class="form-control" id="leaveReason" rows="3"
+                        <textarea class="form-control" rows="3"
                             placeholder="Please provide a reason for the leave request..." required></textarea>
                     </div>
                 </form>
-                <p id="leaveFeedback" style="margin-top: 10px; font-size: 13px;"></p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" data-close-modal>Cancel</button>
-                <button class="btn btn-primary" id="saveLeaveBtn">Submit Request</button>
+                <button class="btn btn-primary" onclick="document.getElementById('leaveForm').submit()">Submit
+                    Request</button>
             </div>
         </div>
     </div>

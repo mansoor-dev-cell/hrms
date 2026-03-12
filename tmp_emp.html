@@ -14,8 +14,6 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="images/logo.jpeg" alt="Sophia Academy"
-                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;">
                 <div class="logo-text">SOPHIA-ACADEMY HR</div>
             </div>
             <nav class="sidebar-nav">
@@ -23,11 +21,11 @@
                     <i class="ph ph-squares-four nav-icon"></i>
                     Dashboard
                 </a>
-                <a href="emp.html" class="nav-item active admin-only">
+                <a href="emp.html" class="nav-item active">
                     <i class="ph ph-users nav-icon"></i>
                     Employees
                 </a>
-                <a href="attendance.html" class="nav-item admin-only">
+                <a href="attendance.html" class="nav-item">
                     <i class="ph ph-calendar-check nav-icon"></i>
                     Attendance
                 </a>
@@ -68,7 +66,7 @@
                         <h1 class="page-title">Employee Directory</h1>
                         <p class="page-subtitle">Manage all your team members across departments.</p>
                     </div>
-                    <button class="btn btn-primary admin-only" data-open-modal="addEmployeeModal">
+                    <button class="btn btn-primary" data-open-modal="addEmployeeModal">
                         <i class="ph ph-plus"></i>
                         Add Employee
                     </button>
@@ -81,7 +79,7 @@
                             <div style="flex: 1; min-width: 250px; position: relative;">
                                 <i class="ph ph-magnifying-glass"
                                     style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 18px;"></i>
-                                <input type="text" id="employeeSearchInput" class="form-control"
+                                <input type="text" class="form-control"
                                     placeholder="Search employees by name, role or email..."
                                     style="padding-left: 44px; margin: 0; width: 100%;">
                             </div>
@@ -115,6 +113,7 @@
                                     <th>Role</th>
                                     <th>Join Date</th>
                                     <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="employeeTableBody">

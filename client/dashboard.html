@@ -15,6 +15,8 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
+                <img src="images/logo.jpeg" alt="Sophia Academy"
+                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;">
                 <div class="logo-text">SOPHIA-ACADEMY HR</div>
             </div>
             <nav class="sidebar-nav">
@@ -22,11 +24,11 @@
                     <i class="ph ph-squares-four nav-icon"></i>
                     Dashboard
                 </a>
-                <a href="emp.html" class="nav-item">
+                <a href="emp.html" class="nav-item admin-only">
                     <i class="ph ph-users nav-icon"></i>
                     Employees
                 </a>
-                <a href="attendance.html" class="nav-item">
+                <a href="attendance.html" class="nav-item admin-only">
                     <i class="ph ph-calendar-check nav-icon"></i>
                     Attendance
                 </a>
@@ -55,7 +57,7 @@
                     <div class="user-profile" style="cursor: pointer;">
                         <div class="avatar">AD</div>
                         <div class="user-info" style="display: flex; flex-direction: column;">
-                            <span class="name">Admin User</span>
+                            <span class="name">User</span>
                             <span class="role">HR Manager</span>
                         </div>
                     </div>
@@ -64,229 +66,270 @@
 
             <!-- Content -->
             <main class="content-area">
-                <div class="page-header">
+                <!-- Admin Dashboard Header -->
+                <div class="page-header admin-only">
                     <div>
                         <h1 class="page-title">Dashboard Overview</h1>
                         <p class="page-subtitle">Welcome back, here's what's happening today.</p>
                     </div>
-                    <button class="btn btn-primary">
-                        <i class="ph ph-download-simple"></i>
-                        Generate Report
-                    </button>
+
                 </div>
 
-                <!-- Stats Grid -->
-                <!-- We do inline CSS here for grid structural stuff that might be generic, or we can use generic utility classes. Let's use generic flex/grid where applicable -->
-                <div
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px;">
-                    <!-- Stat Card 1 -->
-                    <div class="card">
-                        <div class="card-body">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
-                                    <p class="text-muted fw-semibold"
-                                        style="font-size: 13px; text-transform: uppercase;">Total Employees</p>
-                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">124</h2>
-                                </div>
-                                <div
-                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                                    <i class="ph ph-users-three"></i>
-                                </div>
-                            </div>
-                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
-                                <span class="text-success fw-semibold"><i class="ph ph-trend-up"></i> +4</span>
-                                <span class="text-muted"> vs last month</span>
-                            </p>
-                        </div>
+                <!-- Employee Dashboard Header -->
+                <div class="page-header employee-only" style="display:none;">
+                    <div>
+                        <h1 class="page-title" id="empWelcomeTitle">Welcome back! 👋</h1>
+                        <p class="page-subtitle">Here's your personal overview for this month.</p>
                     </div>
-
-                    <!-- Stat Card 2 -->
-                    <div class="card">
-                        <div class="card-body">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
-                                    <p class="text-muted fw-semibold"
-                                        style="font-size: 13px; text-transform: uppercase;">Today's Attendance</p>
-                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">118<span
-                                            style="font-size: 18px; color: var(--text-muted); font-weight: 500;">/124</span>
-                                    </h2>
-                                </div>
-                                <div
-                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                                    <i class="ph ph-user-check"></i>
-                                </div>
-                            </div>
-                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
-                                <span class="text-success fw-semibold">95%</span>
-                                <span class="text-muted"> presence rate</span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Stat Card 3 -->
-                    <div class="card">
-                        <div class="card-body">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div>
-                                    <p class="text-muted fw-semibold"
-                                        style="font-size: 13px; text-transform: uppercase;">Employees on Leave</p>
-                                    <h2 style="font-size: 32px; font-weight: 700; margin: 8px 0;">6</h2>
-                                </div>
-                                <div
-                                    style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--warning-bg); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 24px;">
-                                    <i class="ph ph-calendar-x"></i>
-                                </div>
-                            </div>
-                            <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
-                                <span class="text-danger fw-semibold">2 Pending</span>
-                                <span class="text-muted"> approval requests</span>
-                            </p>
-                        </div>
-                    </div>
+                    <a href="leave.html" class="btn btn-primary">
+                        <i class="ph ph-plus"></i>
+                        Apply for Leave
+                    </a>
                 </div>
 
-                <!-- Recent Activity & Chart placeholder -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
-                    <!-- Table Area -->
-                    <div class="card" style="grid-column: span 2; @media (max-width: 900px) { grid-column: span 1; }">
-                        <div class="card-body">
+                <!-- ===== ADMIN dashboard content ===== -->
+                <div class="admin-only">
+                    <!-- Stats Grid -->
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                        <!-- Stat Card 1 -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <p class="text-muted fw-semibold"
+                                            style="font-size: 13px; text-transform: uppercase;">Total Employees</p>
+                                        <h2 id="totalEmployeesCount"
+                                            style="font-size: 32px; font-weight: 700; margin: 8px 0;">...</h2>
+                                    </div>
+                                    <div
+                                        style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                        <i class="ph ph-users-three"></i>
+                                    </div>
+                                </div>
+                                <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                    <span class="text-success fw-semibold"><i class="ph ph-trend-up"></i> +4</span>
+                                    <span class="text-muted"> vs last month</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Stat Card 2 -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <p class="text-muted fw-semibold"
+                                            style="font-size: 13px; text-transform: uppercase;">Today's
+                                            Attendance</p>
+                                        <h2 id="todaysAttendanceCount"
+                                            style="font-size: 32px; font-weight: 700; margin: 8px 0;">...</h2>
+                                    </div>
+                                    <div
+                                        style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                        <i class="ph ph-user-check"></i>
+                                    </div>
+                                </div>
+                                <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                    <span class="text-success fw-semibold">95%</span>
+                                    <span class="text-muted"> presence rate</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Stat Card 3 -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                    <div>
+                                        <p class="text-muted fw-semibold"
+                                            style="font-size: 13px; text-transform: uppercase;">Employees on
+                                            Leave</p>
+                                        <h2 id="employeesOnLeaveCount"
+                                            style="font-size: 32px; font-weight: 700; margin: 8px 0;">...</h2>
+                                    </div>
+                                    <div
+                                        style="width: 48px; height: 48px; border-radius: 12px; background-color: var(--warning-bg); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                        <i class="ph ph-calendar-x"></i>
+                                    </div>
+                                </div>
+                                <p style="font-size: 13px; margin-top: 16px; margin-bottom: 0;">
+                                    <span class="text-danger fw-semibold">2 Pending</span>
+                                    <span class="text-muted"> approval requests</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity & Chart placeholder -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px;">
+                        <!-- Table Area -->
+                        <div class="card"
+                            style="grid-column: span 2; @media (max-width: 900px) { grid-column: span 1; }">
+                            <div class="card-body">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Recent Hirings</h3>
+                                    <a href="emp.html" class="btn btn-outline"
+                                        style="padding: 6px 12px; font-size: 12px;">View All</a>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table" style="margin-bottom: 0;">
+                                        <thead>
+                                            <tr>
+                                                <th>Employee</th>
+                                                <th>Role</th>
+                                                <th>Department</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentHiringsTableBody">
+                                            <tr>
+                                                <td colspan="6" style="text-align: center; padding: 20px;"
+                                                    class="text-muted">Loading
+                                                    recent hirings...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- ===== EMPLOYEE dashboard content ===== -->
+                        <div class="employee-only" style="display:none;">
+
+                            <!-- Personal Stats Row -->
                             <div
-                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Recent Hirings</h3>
-                                <a href="emp.html" class="btn btn-outline"
-                                    style="padding: 6px 12px; font-size: 12px;">View All</a>
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 28px;">
+                                <!-- Days Present This Month -->
+                                <div class="card" style="border-top: 4px solid var(--primary);">
+                                    <div class="card-body" style="text-align: center; padding: 24px 16px;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 14px; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px;">
+                                            <i class="ph ph-calendar-check"></i>
+                                        </div>
+                                        <h2 id="empDaysPresent"
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">
+                                            -</h2>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Days Present</p>
+                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">This month</p>
+                                    </div>
+                                </div>
+
+                                <!-- Days Absent -->
+                                <div class="card" style="border-top: 4px solid var(--danger);">
+                                    <div class="card-body" style="text-align: center; padding: 24px 16px;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 14px; background-color: rgba(239,68,68,0.1); color: var(--danger); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px;">
+                                            <i class="ph ph-calendar-x"></i>
+                                        </div>
+                                        <h2 id="empDaysAbsent"
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-
+                                        </h2>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Days Absent</p>
+                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">This month</p>
+                                    </div>
+                                </div>
+
+                                <!-- Approved Leaves -->
+                                <div class="card" style="border-top: 4px solid var(--success);">
+                                    <div class="card-body" style="text-align: center; padding: 24px 16px;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 14px; background-color: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px;">
+                                            <i class="ph ph-check-circle"></i>
+                                        </div>
+                                        <h2 id="empApprovedLeaves"
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-</h2>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Approved Leaves</p>
+                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">All time</p>
+                                    </div>
+                                </div>
+
+                                <!-- Pending Leaves -->
+                                <div class="card" style="border-top: 4px solid var(--warning);">
+                                    <div class="card-body" style="text-align: center; padding: 24px 16px;">
+                                        <div
+                                            style="width: 48px; height: 48px; border-radius: 14px; background-color: var(--warning-bg); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px;">
+                                            <i class="ph ph-clock"></i>
+                                        </div>
+                                        <h2 id="empPendingLeaves"
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-</h2>
+                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Pending Leaves</p>
+                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">Awaiting
+                                            approval
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="table-responsive">
-                                <table class="table" style="margin-bottom: 0;">
-                                    <thead>
-                                        <tr>
-                                            <th>Employee</th>
-                                            <th>Role</th>
-                                            <th>Department</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-center gap-3">
-                                                    <div class="avatar"
-                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(99, 102, 241, 0.1); color: var(--primary);">
-                                                        SJ</div>
-                                                    <div>
-                                                        <div class="fw-semibold text-main">Sarah Jenkins</div>
-                                                        <div class="text-muted" style="font-size: 12px;">
-                                                            sarah.j@company.com</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td style="vertical-align: middle;">Product Designer</td>
-                                            <td style="vertical-align: middle;">Design</td>
-                                            <td style="vertical-align: middle;"><span
-                                                    class="badge badge-success">Active</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-center gap-3">
-                                                    <div class="avatar"
-                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(16, 185, 129, 0.1); color: var(--success);">
-                                                        MW</div>
-                                                    <div>
-                                                        <div class="fw-semibold text-main">Michael Wong</div>
-                                                        <div class="text-muted" style="font-size: 12px;">
-                                                            m.wong@company.com</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td style="vertical-align: middle;">Frontend Dev</td>
-                                            <td style="vertical-align: middle;">Engineering</td>
-                                            <td style="vertical-align: middle;"><span
-                                                    class="badge badge-success">Active</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>
-                                                <div class="d-flex align-center gap-3">
-                                                    <div class="avatar"
-                                                        style="width: 36px; height: 36px; font-size: 13px; background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                                                        EL</div>
-                                                    <div>
-                                                        <div class="fw-semibold text-main">Emma Larson</div>
-                                                        <div class="text-muted" style="font-size: 12px;">
-                                                            emma.l@company.com</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td style="vertical-align: middle;">HR Specialist</td>
-                                            <td style="vertical-align: middle;">Human Resources</td>
-                                            <td style="vertical-align: middle;"><span
-                                                    class="badge badge-warning">Onboarding</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <!-- Calendar + Upcoming Leaves -->
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;">
+
+                                <!-- Attendance Calendar -->
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Attendance
+                                                Calendar
+                                            </h3>
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <button id="calPrevMonth" class="btn btn-outline"
+                                                    style="padding: 4px 10px; font-size: 13px;">&larr;</button>
+                                                <span id="calMonthLabel"
+                                                    style="font-weight: 600; font-size: 14px; min-width: 110px; text-align: center;"></span>
+                                                <button id="calNextMonth" class="btn btn-outline"
+                                                    style="padding: 4px 10px; font-size: 13px;">&rarr;</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Calendar Grid -->
+                                        <div id="empCalendarGrid"
+                                            style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
+                                            <!-- Rendered by JS -->
+                                        </div>
+
+                                        <!-- Legend -->
+                                        <div style="display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap;">
+                                            <span
+                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
+                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--success); display: inline-block;"></span>Present</span>
+                                            <span
+                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
+                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--warning); display: inline-block;"></span>Leave</span>
+                                            <span
+                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
+                                                    style="width: 12px; height: 12px; border-radius: 3px; background: rgba(239,68,68,0.25); display: inline-block;"></span>Absent</span>
+                                            <span
+                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
+                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--border); display: inline-block;"></span>Weekend</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Upcoming Leaves Panel -->
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h3
+                                            style="font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 16px;">
+                                            My Leaves</h3>
+                                        <div id="empLeavesList"
+                                            style="display: flex; flex-direction: column; gap: 12px;">
+                                            <p class="text-muted" style="font-size: 13px;">Loading...</p>
+                                        </div>
+                                        <a href="leave.html"
+                                            style="display: block; margin-top: 16px; text-align: center; font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">View
+                                            all leave requests →</a>
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
-                    </div>
+                        <!-- ===== END EMPLOYEE dashboard content ===== -->
 
-                    <!-- Activity Area -->
-                    <div class="card">
-                        <div class="card-body">
-                            <h3 style="font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 20px;">Upcoming
-                                Events</h3>
-
-                            <div style="display: flex; flex-direction: column; gap: 16px;">
-                                <!-- Item 1 -->
-                                <div
-                                    style="display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
-                                    <div
-                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--primary-light); color: var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <span
-                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
-                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">12</span>
-                                    </div>
-                                    <div>
-                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
-                                            David Chen's Birthday</p>
-                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Engineering Dept</p>
-                                    </div>
-                                </div>
-
-                                <!-- Item 2 -->
-                                <div
-                                    style="display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
-                                    <div
-                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--warning-bg); color: #d97706; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <span
-                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
-                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">14</span>
-                                    </div>
-                                    <div>
-                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
-                                            Annual Leave Started</p>
-                                        <p class="text-muted" style="font-size: 13px; margin: 0;">Jessica Miller (3
-                                            days)</p>
-                                    </div>
-                                </div>
-
-                                <!-- Item 3 -->
-                                <div style="display: flex; gap: 16px;">
-                                    <div
-                                        style="width: 44px; height: 44px; border-radius: 10px; background-color: var(--success-bg); color: var(--success); display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <span
-                                            style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Oct</span>
-                                        <span style="font-size: 16px; font-weight: 700; line-height: 1;">18</span>
-                                    </div>
-                                    <div>
-                                        <p class="fw-semibold text-main" style="margin-bottom: 4px; font-size: 14px;">
-                                            Company Townhall</p>
-                                        <p class="text-muted" style="font-size: 13px; margin: 0;">All Staff • Conference
-                                            Room</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </main>
         </div>
     </div>
