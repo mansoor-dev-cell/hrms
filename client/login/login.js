@@ -3,25 +3,42 @@ const API_BASE = "http://localhost:5000/api/auth";
 // ── Element refs
 const tabSignIn = document.getElementById("tabSignIn");
 const tabSignUp = document.getElementById("tabSignUp");
+const authTabs = document.getElementById("authTabs");
 const signInForm = document.getElementById("signInForm");
 const signUpForm = document.getElementById("signUpForm");
+const forgotForm = document.getElementById("forgotForm");
+const resetForm = document.getElementById("resetForm");
 const goSignUp = document.getElementById("goSignUp");
 const goSignIn = document.getElementById("goSignIn");
 const siFeedback = document.getElementById("siFeedback");
 const suFeedback = document.getElementById("suFeedback");
+const fpFeedback = document.getElementById("fpFeedback");
+const rpFeedback = document.getElementById("rpFeedback");
 const siSubmit = document.getElementById("siSubmit");
 const suSubmit = document.getElementById("suSubmit");
+const fpSubmit = document.getElementById("fpSubmit");
+const rpSubmit = document.getElementById("rpSubmit");
 const tabSlider = document.getElementById("tabSlider");
 const strengthBar = document.getElementById("strengthBar");
 const strengthLabel = document.getElementById("strengthLabel");
+const panelTitle = document.getElementById("panelTitle");
+const panelSubtitle = document.getElementById("panelSubtitle");
 
-// ── Tab switching
+// Track email used for forgot flow
+let forgotEmail = "";
+
+// ── View helpers
 function showSignIn() {
   tabSignIn.classList.add("active");
   tabSignUp.classList.remove("active");
   tabSlider.classList.remove("right");
+  authTabs.style.display = "";
   signInForm.classList.remove("hidden");
   signUpForm.classList.add("hidden");
+  forgotForm.classList.add("hidden");
+  resetForm.classList.add("hidden");
+  panelTitle.textContent = "Welcome back";
+  panelSubtitle.textContent = "Sign in to your account to continue";
   clearFeedback(siFeedback);
 }
 
@@ -29,15 +46,50 @@ function showSignUp() {
   tabSignUp.classList.add("active");
   tabSignIn.classList.remove("active");
   tabSlider.classList.add("right");
+  authTabs.style.display = "";
   signUpForm.classList.remove("hidden");
   signInForm.classList.add("hidden");
+  forgotForm.classList.add("hidden");
+  resetForm.classList.add("hidden");
+  panelTitle.textContent = "Create account";
+  panelSubtitle.textContent = "Join SOPHIA-ACADEMY HR today";
   clearFeedback(suFeedback);
+}
+
+function showForgotPassword() {
+  authTabs.style.display = "none";
+  signInForm.classList.add("hidden");
+  signUpForm.classList.add("hidden");
+  resetForm.classList.add("hidden");
+  forgotForm.classList.remove("hidden");
+  panelTitle.textContent = "Forgot password?";
+  panelSubtitle.textContent =
+    "Enter your email and we'll send you a reset code";
+  clearFeedback(fpFeedback);
+}
+
+function showResetPassword() {
+  authTabs.style.display = "none";
+  signInForm.classList.add("hidden");
+  signUpForm.classList.add("hidden");
+  forgotForm.classList.add("hidden");
+  resetForm.classList.remove("hidden");
+  panelTitle.textContent = "Reset password";
+  panelSubtitle.textContent =
+    "Enter the code you received and choose a new password";
 }
 
 tabSignIn.addEventListener("click", showSignIn);
 tabSignUp.addEventListener("click", showSignUp);
 goSignUp.addEventListener("click", showSignUp);
 goSignIn.addEventListener("click", showSignIn);
+document
+  .getElementById("forgotLink")
+  .addEventListener("click", showForgotPassword);
+document.getElementById("backToSignIn").addEventListener("click", showSignIn);
+document
+  .getElementById("backToForgot")
+  .addEventListener("click", showForgotPassword);
 
 // ── Password toggles
 document.querySelectorAll(".toggle-password").forEach((btn) => {
@@ -67,6 +119,86 @@ document.getElementById("suPassword").addEventListener("input", (e) => {
   strengthBar.className = `strength-bar${cls ? " " + cls : ""}`;
   strengthLabel.textContent = lbl;
   strengthLabel.className = `strength-label${cls ? " " + cls : ""}`;
+});
+
+// ── Forgot Password submit
+fpSubmit.addEventListener("click", async () => {
+  clearFeedback(fpFeedback);
+  const email = document.getElementById("fpEmail").value.trim();
+  if (!email) return showFeedback(fpFeedback, "error", "Please enter your email address.");
+
+  setLoading(fpSubmit, true);
+  try {
+    const res = await fetch(`${API_BASE}/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showFeedback(fpFeedback, "error", data.message || "Something went wrong.");
+      return;
+    }
+
+    forgotEmail = email;
+
+    // Show reset code notice (dev mode: code is returned in response)
+    const notice = document.getElementById("resetCodeNotice");
+    if (data.resetCode) {
+      notice.innerHTML = `A reset code has been generated.<br>Your reset code: <strong>${data.resetCode}</strong>`;
+    } else {
+      notice.textContent = "Check your email for the reset code.";
+    }
+    document.getElementById("rpCode").value = data.resetCode || "";
+    showResetPassword();
+  } catch {
+    showFeedback(fpFeedback, "error", "Cannot reach server. Is it running?");
+  } finally {
+    setLoading(fpSubmit, false);
+  }
+});
+
+// ── Reset Password submit
+rpSubmit.addEventListener("click", async () => {
+  clearFeedback(rpFeedback);
+  const token = document.getElementById("rpCode").value.trim();
+  const newPassword = document.getElementById("rpNewPass").value;
+  const confirm    = document.getElementById("rpConfirm").value;
+
+  if (!token || !newPassword || !confirm)
+    return showFeedback(rpFeedback, "error", "Please fill in all fields.");
+  if (newPassword.length < 6)
+    return showFeedback(rpFeedback, "error", "Password must be at least 6 characters.");
+  if (newPassword !== confirm)
+    return showFeedback(rpFeedback, "error", "Passwords do not match.");
+
+  setLoading(rpSubmit, true);
+  try {
+    const res = await fetch(`${API_BASE}/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: forgotEmail, token, newPassword }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showFeedback(rpFeedback, "error", data.message || "Reset failed.");
+      return;
+    }
+
+    showFeedback(rpFeedback, "success", "Password reset! Redirecting to sign in...");
+    setTimeout(() => {
+      document.getElementById("rpCode").value = "";
+      document.getElementById("rpNewPass").value = "";
+      document.getElementById("rpConfirm").value = "";
+      showSignIn();
+    }, 1500);
+  } catch {
+    showFeedback(rpFeedback, "error", "Cannot reach server. Is it running?");
+  } finally {
+    setLoading(rpSubmit, false);
+  }
 });
 
 // ── Sign In submit

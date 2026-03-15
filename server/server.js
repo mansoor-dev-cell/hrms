@@ -108,6 +108,71 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// ── Forgot Password ───────────────────────────────────────
+// POST /api/auth/forgot-password
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required." });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Always return the same message to prevent user enumeration
+    if (!user) {
+      return res.json({ message: "If this email is registered, a reset code has been sent." });
+    }
+
+    // Generate a 6-digit numeric reset code
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    // NOTE: In production, send this code by email.
+    // For this local HRMS, the code is returned in the response.
+    console.log(`[Password Reset] Code for ${email}: ${resetToken}`);
+
+    res.json({
+      message: "If this email is registered, a reset code has been sent.",
+      // Remove the next line in production and use email delivery instead:
+      resetCode: resetToken
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
+// ── Reset Password ─────────────────────────────────────────
+// POST /api/auth/reset-password
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword)
+      return res.status(400).json({ message: "Email, reset code, and new password are required." });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user || user.resetToken !== token)
+      return res.status(400).json({ message: "Invalid or expired reset code." });
+
+    if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date())
+      return res.status(400).json({ message: "Reset code has expired. Please request a new one." });
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    res.json({ message: "Password reset successfully. You can now sign in." });
+  } catch (err) {
+    res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
 // ── Current User ───────────────────────────────────────────
 // GET /api/auth/me
 app.get("/api/auth/me", async (req, res) => {

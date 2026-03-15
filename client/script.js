@@ -20,24 +20,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // -- Update Profile DOM Method --
     function updateProfileDOM(userData) {
-        const userNameEls = document.querySelectorAll('.user-info .name');
-        const userRoleEls = document.querySelectorAll('.user-info .role');
-        const userAvatarEls = document.querySelectorAll('.user-profile .avatar');
+      const userNameEls = document.querySelectorAll(".user-info .name");
+      const userRoleEls = document.querySelectorAll(".user-info .role");
+      const userAvatarEls = document.querySelectorAll(".user-profile .avatar");
 
-        userNameEls.forEach(el => {
-            el.textContent = userData.name || 'User';
+      userNameEls.forEach((el) => {
+        el.textContent = userData.name || "User";
+      });
+
+      userRoleEls.forEach((el) => {
+        el.textContent = userData.role === "admin" ? "HR Manager" : "Employee";
+      });
+
+      if (userData.name) {
+        const initials = userData.name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase();
+        userAvatarEls.forEach((el) => {
+          el.textContent = initials || "U";
         });
+      }
 
-        userRoleEls.forEach(el => {
-            el.textContent = userData.role === 'admin' ? 'HR Manager' : 'Employee';
-        });
-
-        if (userData.name) {
-            const initials = userData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            userAvatarEls.forEach(el => {
-                el.textContent = initials || 'U';
-            });
+      // Inject logout button next to each user-profile if not already present
+      document.querySelectorAll(".user-profile").forEach((profileEl) => {
+        if (!profileEl.parentElement.querySelector(".logout-btn")) {
+          const btn = document.createElement("button");
+          btn.className = "logout-btn";
+          btn.title = "Sign out";
+          btn.setAttribute("aria-label", "Sign out");
+          btn.innerHTML = '<i class="ph ph-sign-out"></i>';
+          btn.addEventListener("click", handleLogout);
+          profileEl.insertAdjacentElement("afterend", btn);
         }
+      });
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "login/login.html";
     }
 
     // -- Role-Based Access Control --
@@ -82,11 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (saveBtn) saveBtn.addEventListener('click', submitAttendanceRecord);
         }
 
-        if (page === 'leave.html' || page === 'leave.html') {
-            fetchAndDisplayLeaves();
-            populateEmployeeDropdown('leaveEmployee');
-            const saveLeaveBtn = document.getElementById('saveLeaveBtn');
-            if (saveLeaveBtn) saveLeaveBtn.addEventListener('click', submitLeaveRequest);
+        if (page === "leave.html") {
+          setupLeaveFormForRole(verifiedUser);
+          fetchAndDisplayLeaves();
+          if (verifiedUser && verifiedUser.role === "admin")
+            populateEmployeeDropdown("leaveEmployee");
+          const saveLeaveBtn = document.getElementById("saveLeaveBtn");
+          if (saveLeaveBtn)
+            saveLeaveBtn.addEventListener("click", submitLeaveRequest);
         }
 
         if (page === 'dashboard.html' || page === 'index.html' || page === '') {
@@ -193,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let allEmployeesData = []; // Store globally for client-side search
+let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
 
 async function fetchAndDisplayUsers() {
     const tbody = document.getElementById('employeeTableBody');
@@ -271,7 +299,7 @@ function renderUsersTable(usersToRender) {
             <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
             <td style="vertical-align: middle;" class="text-muted">${joinDate}</td>
             <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${status}</span></td>
-            
+
         `;
         tbody.appendChild(tr);
     });
@@ -659,17 +687,20 @@ async function fetchAndDisplayLeaves() {
         // Strip out time matching for "today"
         const todayStr = now.toISOString().split('T')[0];
 
-        leaves.forEach(l => {
-            if (l.status === 'pending') pending++;
-            if (l.status === 'approved') {
-                const sDate = new Date(l.startDate);
-                if (sDate.getMonth() === currentMonth && sDate.getFullYear() === currentYear) {
-                    approvedThisMonth++;
-                }
-                if (todayStr >= l.startDate && todayStr <= l.endDate) {
-                    onLeaveToday++;
-                }
+        allLeavesData.forEach((l) => {
+          if (l.status === "pending") pending++;
+          if (l.status === "approved") {
+            const sDate = new Date(l.startDate);
+            if (
+              sDate.getMonth() === currentMonth &&
+              sDate.getFullYear() === currentYear
+            ) {
+              approvedThisMonth++;
             }
+            if (todayStr >= l.startDate && todayStr <= l.endDate) {
+              onLeaveToday++;
+            }
+          }
         });
 
         const pendingEl = document.getElementById('pendingRequestsCount');
@@ -932,188 +963,473 @@ async function fetchEmployeeDashboardData() {
     if (welcomeEl) welcomeEl.textContent = `Welcome back, ${user.name ? user.name.split(' ')[0] : 'there'}! 👋`;
 
     try {
-        const [attRes, leavesRes] = await Promise.all([
-            fetch('http://localhost:5000/api/attendance'),
-            fetch('http://localhost:5000/api/leaves')
-        ]);
+      const [attRes, leavesRes] = await Promise.all([
+        fetch("http://localhost:5000/api/attendance"),
+        fetch("http://localhost:5000/api/leaves"),
+      ]);
 
-        const allAttendance = attRes.ok ? await attRes.json() : [];
-        const allLeaves = leavesRes.ok ? await leavesRes.json() : [];
+      const allAttendance = attRes.ok ? await attRes.json() : [];
+      const allLeaves = leavesRes.ok ? await leavesRes.json() : [];
 
-        // Filter for current user only
-        const myAttendance = allAttendance.filter(a => {
-            const emp = a.employeeId;
-            return emp && (emp._id === user._id || emp.email === user.email);
-        });
+      // Filter for current user only
+      const myAttendance = allAttendance.filter((a) => {
+        const emp = a.employeeId;
+        return emp && (emp._id === user._id || emp.email === user.email);
+      });
 
-        const myLeaves = allLeaves.filter(l => {
-            const emp = l.employeeId;
-            return emp && (emp._id === user._id || emp.email === user.email);
-        });
+      const myLeaves = allLeaves.filter((l) => {
+        const emp = l.employeeId;
+        return emp && (emp._id === user._id || emp.email === user.email);
+      });
 
-        // --- Stats ---
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+      // --- Stats ---
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
 
-        const myAttThisMonth = myAttendance.filter(a => {
-            const d = new Date(a.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        });
+      const myAttThisMonth = myAttendance.filter((a) => {
+        const d = new Date(a.date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
 
-        const presentDays = myAttThisMonth.filter(a => a.status === 'present' || a.status === 'late').length;
+      const presentDays = myAttThisMonth.filter(
+        (a) => a.status === "present" || a.status === "late",
+      ).length;
 
-        // Count working days this month so far (Mon-Fri, up to today)
-        let workingDaysSoFar = 0;
-        for (let d = 1; d <= now.getDate(); d++) {
-            const dayOfWeek = new Date(currentYear, currentMonth, d).getDay();
-            if (dayOfWeek !== 0 && dayOfWeek !== 6) workingDaysSoFar++;
+      // Count working days so far (Mon–Sat; only Sunday is considered off by default)
+      let workingDaysSoFar = 0;
+      for (let d = 1; d <= now.getDate(); d++) {
+        if (new Date(currentYear, currentMonth, d).getDay() !== 0)
+          workingDaysSoFar++;
+      }
+      const absentDays = Math.max(0, workingDaysSoFar - presentDays);
+      const approvedLeaves = myLeaves.filter(
+        (l) => l.status === "approved",
+      ).length;
+      const pendingLeaves = myLeaves.filter(
+        (l) => l.status === "pending",
+      ).length;
+
+      const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+      setEl("empDaysPresent", presentDays);
+      setEl("empDaysAbsent", absentDays);
+      setEl("empApprovedLeaves", approvedLeaves);
+      setEl("empPendingLeaves", pendingLeaves);
+
+      // ── Build attendance map: YYYY-MM-DD → status ──────────────────────────
+      const attendanceMap = {};
+      myAttendance.forEach((a) => {
+        attendanceMap[new Date(a.date).toISOString().split("T")[0]] = a.status;
+      });
+      // Overlay approved leave ranges
+      myLeaves.forEach((l) => {
+        if (l.status !== "approved") return;
+        for (
+          let d = new Date(l.startDate);
+          d <= new Date(l.endDate);
+          d.setDate(d.getDate() + 1)
+        ) {
+          attendanceMap[d.toISOString().split("T")[0]] = "leave";
         }
+      });
 
-        const absentDays = Math.max(0, workingDaysSoFar - presentDays);
-        const approvedLeaves = myLeaves.filter(l => l.status === 'approved').length;
-        const pendingLeaves = myLeaves.filter(l => l.status === 'pending').length;
+      // ── Calendar state ──────────────────────────────────────────────────────
+      let calYear = currentYear;
+      let calMonth = currentMonth;
 
-        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-        setEl('empDaysPresent', presentDays);
-        setEl('empDaysAbsent', absentDays);
-        setEl('empApprovedLeaves', approvedLeaves);
-        setEl('empPendingLeaves', pendingLeaves);
+      function updateSelBar() {
+        const bar = document.getElementById("calSelectionBar");
+        const countEl = document.getElementById("calSelCount");
+        if (!bar) return;
+        if (selectedCalDates.size > 0) {
+          bar.style.display = "flex";
+          if (countEl)
+            countEl.textContent = `${selectedCalDates.size} day${selectedCalDates.size !== 1 ? "s" : ""} selected — click "Apply Leave" to continue`;
+        } else {
+          bar.style.display = "none";
+        }
+      }
 
-        // --- Calendar ---
-        // Build a lookup: YYYY-MM-DD -> status (present/absent/leave/weekend)
-        const attendanceMap = {};
-        myAttendance.forEach(a => {
-            const dateKey = new Date(a.date).toISOString().split('T')[0];
-            attendanceMap[dateKey] = a.status; // 'present', 'absent', 'late'
+      function renderCalendar(year, month) {
+        const grid = document.getElementById("empCalendarGrid");
+        const label = document.getElementById("calMonthLabel");
+        if (!grid || !label) return;
+
+        label.textContent = new Date(year, month, 1).toLocaleDateString(
+          "en-US",
+          { month: "long", year: "numeric" },
+        );
+        grid.innerHTML = "";
+
+        // Day headers
+        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d) => {
+          const hdr = document.createElement("div");
+          hdr.textContent = d;
+          hdr.style.cssText =
+            "font-size:13px;font-weight:700;color:var(--text-muted);padding:8px 0 14px;text-transform:uppercase;letter-spacing:0.5px;";
+          grid.appendChild(hdr);
         });
 
-        // Mark leave dates
-        myLeaves.forEach(l => {
-            if (l.status !== 'approved') return;
-            const start = new Date(l.startDate);
-            const end = new Date(l.endDate);
-            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const key = d.toISOString().split('T')[0];
-                attendanceMap[key] = 'leave';
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        for (let i = 0; i < firstDay; i++)
+          grid.appendChild(document.createElement("div"));
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cell = document.createElement("div");
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const dow = new Date(year, month, day).getDay();
+          const isSun = dow === 0;
+          const isWknd = dow === 0 || dow === 6;
+          const isToday = dateStr === todayStr;
+          const isFuture = dateStr > todayStr;
+          const status = attendanceMap[dateStr];
+          const isSel = selectedCalDates.has(dateStr);
+
+          let bg = "transparent",
+            color = "var(--text-main)",
+            border = "none",
+            cursor = "default",
+            title = "",
+            opacity = "1";
+
+          if (isSel) {
+            bg = "var(--primary)";
+            color = "#fff";
+            cursor = "pointer";
+            title = "Selected — click to deselect";
+          } else if (status === "leave") {
+            bg = "var(--warning)";
+            color = "#fff";
+            title = "Approved Leave";
+          } else if (status === "present") {
+            bg = "var(--success)";
+            color = "#fff";
+            title = "Present";
+          } else if (status === "late") {
+            bg = "var(--success)";
+            color = "#fff";
+            title = "Late / Present";
+          } else if (status === "absent") {
+            bg = "rgba(239,68,68,0.22)";
+            color = "var(--danger)";
+            title = "Absent";
+          } else if (isSun) {
+            bg = "var(--border)";
+            color = "var(--text-muted)";
+            if (!isFuture) {
+              cursor = "pointer";
+              title = "Sunday — click to mark as working day";
             }
-        });
+          } else if (isWknd) {
+            bg = "var(--border)";
+            color = "var(--text-muted)";
+          } else {
+            // Past or future selectable weekday
+            cursor = "pointer";
+            title = isFuture
+              ? "Click to select for leave"
+              : "Click to select for leave";
+            if (isFuture) opacity = "0.65";
+          }
 
-        let calYear = currentYear;
-        let calMonth = currentMonth;
+          if (isToday && !isSel) border = "2px solid var(--primary)";
 
-        function renderCalendar(year, month) {
-            const grid = document.getElementById('empCalendarGrid');
-            const label = document.getElementById('calMonthLabel');
-            if (!grid || !label) return;
-
-            label.textContent = new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-            grid.innerHTML = '';
-
-            // Day headers
-            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
-                const hdr = document.createElement('div');
-                hdr.textContent = d;
-                hdr.style.cssText = 'font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 4px 0; text-transform: uppercase;';
-                grid.appendChild(hdr);
-            });
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            // Empty cells before first day
-            for (let i = 0; i < firstDay; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const cell = document.createElement('div');
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayOfWeek = new Date(year, month, day).getDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                const isToday = dateStr === todayStr;
-                const isFuture = dateStr > todayStr;
-                const attStatus = attendanceMap[dateStr];
-
-                let bg = 'transparent';
-                let color = 'var(--text-main)';
-                let border = 'none';
-                let title = '';
-
-                if (isToday) {
-                    border = '2px solid var(--primary)';
-                    color = 'var(--primary)';
-                }
-
-                if (attStatus === 'leave') {
-                    bg = 'var(--warning)'; color = '#fff'; title = 'On Leave';
-                } else if (attStatus === 'present' || attStatus === 'late') {
-                    bg = 'var(--success)'; color = '#fff'; title = attStatus === 'late' ? 'Late' : 'Present';
-                } else if (attStatus === 'absent') {
-                    bg = 'rgba(239,68,68,0.25)'; color = 'var(--danger)'; title = 'Absent';
-                } else if (isWeekend) {
-                    bg = 'var(--border)'; color = 'var(--text-muted)';
-                }
-
-                cell.style.cssText = `
-                    aspect-ratio: 1;
-                    display: flex; align-items: center; justify-content: center;
-                    border-radius: 8px; font-size: 13px; font-weight: 600;
-                    background: ${bg}; color: ${color}; border: ${border};
-                    cursor: default; transition: opacity 0.15s;
-                    ${isFuture && !attStatus ? 'opacity: 0.4;' : ''}
+          cell.style.cssText = `
+                    min-height:80px; display:flex; align-items:center; justify-content:center;
+                    border-radius:10px; font-size:18px; font-weight:700;
+                    background:${bg}; color:${color}; border:${border};
+                    cursor:${cursor}; opacity:${opacity}; transition:background 0.15s, border 0.15s, transform 0.1s;
                 `;
-                cell.textContent = day;
-                if (title) cell.setAttribute('title', title);
-                grid.appendChild(cell);
-            }
+          if (cursor === "pointer" && !isSel && !status)
+            cell.classList.add("cal-selectable");
+          cell.textContent = day;
+          if (title) cell.title = title;
+
+          // Past Sundays: mark working day. All non-weekend, non-marked days (past or future): select for leave.
+          if (!isWknd || (isSun && !isFuture && !status)) {
+            cell.addEventListener("click", () => {
+              if (isSun && !status && !isFuture) {
+                // Mark Sunday as working day
+                cell.title = "Saving…";
+                fetch("http://localhost:5000/api/attendance", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    employeeId: user.id,
+                    date: dateStr,
+                    status: "present",
+                    checkIn: "--:--",
+                    checkOut: "--:--",
+                    notes: "Working on Sunday",
+                  }),
+                })
+                  .then((r) => {
+                    if (r.ok) {
+                      attendanceMap[dateStr] = "present";
+                      renderCalendar(year, month);
+                    }
+                  })
+                  .catch(console.error);
+                return;
+              }
+              // Cannot select already marked days
+              if (
+                status === "leave" ||
+                status === "present" ||
+                status === "late" ||
+                status === "absent"
+              )
+                return;
+              if (isWknd) return;
+              if (isSel) selectedCalDates.delete(dateStr);
+              else selectedCalDates.add(dateStr);
+              renderCalendar(year, month);
+              updateSelBar();
+            });
+          }
+          grid.appendChild(cell);
         }
+        updateSelBar();
+      }
 
-        // Nav buttons
-        const prevBtn = document.getElementById('calPrevMonth');
-        const nextBtn = document.getElementById('calNextMonth');
-        if (prevBtn) prevBtn.addEventListener('click', () => {
-            calMonth--;
-            if (calMonth < 0) { calMonth = 11; calYear--; }
-            renderCalendar(calYear, calMonth);
-        });
-        if (nextBtn) nextBtn.addEventListener('click', () => {
-            calMonth++;
-            if (calMonth > 11) { calMonth = 0; calYear++; }
-            renderCalendar(calYear, calMonth);
-        });
+      // Nav buttons — .onclick to avoid duplicate listeners on re-render
+      const prevBtn = document.getElementById("calPrevMonth");
+      const nextBtn = document.getElementById("calNextMonth");
+      if (prevBtn)
+        prevBtn.onclick = () => {
+          calMonth--;
+          if (calMonth < 0) {
+            calMonth = 11;
+            calYear--;
+          }
+          renderCalendar(calYear, calMonth);
+        };
+      if (nextBtn)
+        nextBtn.onclick = () => {
+          calMonth++;
+          if (calMonth > 11) {
+            calMonth = 0;
+            calYear++;
+          }
+          renderCalendar(calYear, calMonth);
+        };
 
-        renderCalendar(calYear, calMonth);
+      // Selection bar buttons
+      const clearBtn = document.getElementById("calClearSelBtn");
+      const calApplyBtn = document.getElementById("calApplyLeaveBtn");
+      const empApplyBtn = document.getElementById("empApplyLeaveBtn");
+      const qlSubmitBtnEl = document.getElementById("qlSubmitBtn");
 
-        // --- Leave List ---
-        const leavesList = document.getElementById('empLeavesList');
-        if (leavesList) {
-            const sorted = [...myLeaves].sort((a, b) => new Date(b.startDate) - new Date(a.startDate)).slice(0, 5);
-            if (sorted.length === 0) {
-                leavesList.innerHTML = '<p class="text-muted" style="font-size: 13px;">No leave requests yet. <a href="leave.html" style="color: var(--primary);">Apply now</a>.</p>';
-            } else {
-                leavesList.innerHTML = sorted.map(l => {
-                    const badgeColor = l.status === 'approved' ? 'var(--success)' : l.status === 'rejected' ? 'var(--danger)' : '#d97706';
-                    const badgeBg = l.status === 'approved' ? 'var(--success-bg)' : l.status === 'rejected' ? 'rgba(239,68,68,0.12)' : 'var(--warning-bg)';
-                    const start = new Date(l.startDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-                    const end = new Date(l.endDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-                    const dateStr = l.startDate === l.endDate ? start : `${start} – ${end}`;
-                    const typeStr = l.type ? l.type.charAt(0).toUpperCase() + l.type.slice(1) + ' Leave' : 'Leave';
-                    return `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border);">
-                            <div>
-                                <div style="font-weight: 600; font-size: 13px; color: var(--text-main);">${typeStr}</div>
-                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${dateStr}</div>
-                            </div>
-                            <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: ${badgeBg}; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.5px;">${l.status}</span>
-                        </div>`;
-                }).join('');
-            }
+      if (clearBtn)
+        clearBtn.onclick = () => {
+          selectedCalDates.clear();
+          renderCalendar(calYear, calMonth);
+        };
+      if (calApplyBtn)
+        calApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
+      if (empApplyBtn)
+        empApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
+      if (qlSubmitBtnEl) qlSubmitBtnEl.onclick = submitQuickLeave;
+
+      renderCalendar(calYear, calMonth);
+
+      // ── Recent leaves sidebar ───────────────────────────────────────────────
+      const leavesList = document.getElementById("empLeavesList");
+      if (leavesList) {
+        const sorted = [...myLeaves]
+          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+          .slice(0, 5);
+        if (sorted.length === 0) {
+          leavesList.innerHTML = `<p class="text-muted" style="font-size:13px;">No leave requests yet. <a href="leave.html" style="color:var(--primary);">Apply now →</a></p>`;
+        } else {
+          leavesList.innerHTML = sorted
+            .map((l) => {
+              const bColor =
+                l.status === "approved"
+                  ? "var(--success)"
+                  : l.status === "rejected"
+                    ? "var(--danger)"
+                    : "#d97706";
+              const bBg =
+                l.status === "approved"
+                  ? "var(--success-bg)"
+                  : l.status === "rejected"
+                    ? "rgba(239,68,68,0.12)"
+                    : "var(--warning-bg)";
+              const s = new Date(l.startDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "2-digit",
+              });
+              const e = new Date(l.endDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "2-digit",
+              });
+              const dStr = l.startDate === l.endDate ? s : `${s} – ${e}`;
+              const tStr = l.type
+                ? l.type.charAt(0).toUpperCase() + l.type.slice(1) + " Leave"
+                : "Leave";
+              return `<div style="display:flex;flex-direction:column;gap:6px;min-width:160px;padding:12px 16px;border-radius:10px;background:var(--bg-surface);border:1px solid var(--border);flex:0 0 auto;">
+                        <div style="font-weight:600;font-size:13px;color:var(--text-main);">${tStr}</div>
+                        <div style="font-size:12px;color:var(--text-muted);">${dStr}</div>
+                        <span style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:${bBg};color:${bColor};text-transform:uppercase;letter-spacing:0.5px;align-self:flex-start;">${l.status}</span>
+                    </div>`;
+            })
+            .join("");
         }
-
+      }
     } catch (err) {
         console.error('Employee dashboard error:', err);
+    }
+}
+
+// ── Quick Leave Modal (employee dashboard) ─────────────────────────────────────
+function openQuickLeaveModal(datesSet) {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user) return;
+
+    const qlAvatar = document.getElementById('qlAvatar');
+    const qlName   = document.getElementById('qlName');
+    const qlEmail  = document.getElementById('qlEmail');
+    const qlEmpId  = document.getElementById('qlEmployeeId');
+    if (qlName)   qlName.textContent  = user.name  || 'You';
+    if (qlEmail)  qlEmail.textContent = user.email || '';
+    if (qlEmpId)  qlEmpId.value       = user.id    || '';
+    if (qlAvatar) {
+        const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'U';
+        qlAvatar.textContent = initials;
+    }
+
+    const qlDateBadge = document.getElementById('qlDateBadge');
+    const qlStart     = document.getElementById('qlStartDate');
+    const qlEnd       = document.getElementById('qlEndDate');
+
+    if (datesSet && datesSet.size > 0) {
+        const sorted = [...datesSet].sort();
+        if (qlStart) qlStart.value = sorted[0];
+        if (qlEnd)   qlEnd.value   = sorted[sorted.length - 1];
+        if (qlDateBadge) {
+            qlDateBadge.style.display = 'block';
+            qlDateBadge.innerHTML = sorted.length === 1
+                ? `<i class="ph ph-calendar" style="margin-right:5px;"></i>Selected: <strong>${sorted[0]}</strong>`
+                : `<i class="ph ph-calendar" style="margin-right:5px;"></i>Selected: <strong>${sorted[0]}</strong> → <strong>${sorted[sorted.length-1]}</strong> (${sorted.length} days)`;
+        }
+    } else {
+        if (qlStart)     qlStart.value          = '';
+        if (qlEnd)       qlEnd.value             = '';
+        if (qlDateBadge) qlDateBadge.style.display = 'none';
+    }
+
+    const fb = document.getElementById('qlFeedback');
+    if (fb) { fb.textContent = ''; fb.style.color = ''; }
+    const modal = document.getElementById('quickLeaveModal');
+    if (modal) modal.classList.add('active');
+}
+
+async function submitQuickLeave() {
+    const btn       = document.getElementById('qlSubmitBtn');
+    const feedback  = document.getElementById('qlFeedback');
+    const employeeId = (document.getElementById('qlEmployeeId') || {}).value || '';
+    const type       = (document.getElementById('qlLeaveType')  || {}).value || '';
+    const startDate  = (document.getElementById('qlStartDate')  || {}).value || '';
+    const endDate    = (document.getElementById('qlEndDate')    || {}).value || '';
+    const reason     = ((document.getElementById('qlReason')    || {}).value || '').trim();
+
+    if (!type || !startDate || !endDate || !reason) {
+        if (feedback) { feedback.style.color = 'var(--danger)'; feedback.textContent = 'Please fill in all fields.'; }
+        return;
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+        if (feedback) { feedback.style.color = 'var(--danger)'; feedback.textContent = 'End date cannot be before start date.'; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+    try {
+        const res  = await fetch('http://localhost:5000/api/leaves', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employeeId, type, startDate, endDate, reason })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            if (feedback) { feedback.style.color = 'var(--danger)'; feedback.textContent = data.message || 'Submission failed.'; }
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-paper-plane-tilt" style="margin-right:4px;"></i>Submit Request'; }
+            return;
+        }
+
+        if (feedback) { feedback.style.color = 'var(--success)'; feedback.textContent = '✓ Leave request submitted!'; }
+        setTimeout(() => {
+            const modal = document.getElementById('quickLeaveModal');
+            if (modal) modal.classList.remove('active');
+            document.getElementById('quickLeaveForm').reset();
+            if (feedback) feedback.textContent = '';
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-paper-plane-tilt" style="margin-right:4px;"></i>Submit Request'; }
+            selectedCalDates.clear();
+            fetchEmployeeDashboardData();
+        }, 1200);
+    } catch {
+        if (feedback) { feedback.style.color = 'var(--danger)'; feedback.textContent = 'Cannot reach server.'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-paper-plane-tilt" style="margin-right:4px;"></i>Submit Request'; }
+    }
+}
+
+// ── Leave page role setup ───────────────────────────────────────────────────────
+function setupLeaveFormForRole(user) {
+    const isAdmin       = user && user.role === 'admin';
+    const dropdownGroup = document.getElementById('leaveEmpDropdownGroup');
+    const empInfo       = document.getElementById('leaveEmpInfo');
+    const leaveEmployee = document.getElementById('leaveEmployee');
+    const searchWrap    = document.getElementById('leaveSearchWrap');
+
+    if (isAdmin) {
+        if (dropdownGroup) dropdownGroup.style.display = '';
+        if (empInfo)       empInfo.style.display       = 'none';
+    } else {
+        if (dropdownGroup) dropdownGroup.style.display = 'none';
+        if (empInfo)       empInfo.style.display       = 'flex';
+        if (leaveEmployee) {
+            // Add the employee's own ID as an option so .value can be set
+            if (!leaveEmployee.querySelector(`option[value="${user.id}"]`)) {
+                const opt = document.createElement('option');
+                opt.value = user.id;
+                opt.textContent = user.name || 'Me';
+                leaveEmployee.appendChild(opt);
+            }
+            leaveEmployee.value = user.id;
+        }
+        if (searchWrap)    searchWrap.style.display    = 'none';
+
+        const nameEl   = document.getElementById('leaveModalName');
+        const roleEl   = document.getElementById('leaveModalRole');
+        const avatarEl = document.getElementById('leaveModalAvatar');
+        if (nameEl)   nameEl.textContent   = user.name || 'You';
+        if (roleEl)   roleEl.textContent   = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee';
+        if (avatarEl) {
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'U';
+            avatarEl.textContent = initials;
+        }
+
+        // Tailor page labels for employee self-service
+        const pageTitle = document.querySelector('.page-title');
+        const pageSub   = document.querySelector('.page-subtitle');
+        if (pageTitle) pageTitle.textContent = 'My Leaves';
+        if (pageSub)   pageSub.textContent   = 'Your personal leave history and requests.';
+
+        // Employee-specific stat card labels
+        const pendingLabel = document.getElementById('pendingRequestsCount');
+        if (pendingLabel) pendingLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'MY PENDING';
+        const approvedLabel = document.getElementById('approvedThisMonthCount');
+        if (approvedLabel) approvedLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'MY APPROVED THIS MONTH';
+        const todayLabel = document.getElementById('onLeaveTodayCount');
+        if (todayLabel) todayLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'ON LEAVE TODAY';
     }
 }
 
@@ -1232,7 +1548,7 @@ async function fetchDashboardData() {
                     <td style="vertical-align: middle;">${department}</td>
                     <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
                     <td style="vertical-align: middle;" class="text-muted">${dateStr}</td>
-                    
+
                 `;
                 recentHiringsTbody.appendChild(tr);
             });

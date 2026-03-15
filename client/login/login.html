@@ -56,7 +56,7 @@
                 <p class="panel-subtitle" id="panelSubtitle">Sign in to your account to continue</p>
 
                 <!-- Tab switcher -->
-                <div class="auth-tabs">
+                <div class="auth-tabs" id="authTabs">
                     <button class="tab-btn active" id="tabSignIn">Sign In</button>
                     <button class="tab-btn" id="tabSignUp">Sign Up</button>
                     <span class="tab-slider" id="tabSlider"></span>
@@ -76,6 +76,7 @@
                     <div class="form-group">
                         <div class="label-row">
                             <label for="siPassword">Password</label>
+                            <button type="button" class="link-btn forgot-link" id="forgotLink">Forgot password?</button>
                         </div>
                         <div class="input-wrapper">
                             <i class="ph ph-lock input-icon"></i>
@@ -98,6 +99,69 @@
                         <button type="button" class="link-btn" id="goSignUp">Create one</button>
                     </p>
                 </form>
+
+                <!-- ── Forgot Password Form ── -->
+                <div class="auth-form hidden" id="forgotForm">
+                    <div class="forgot-back">
+                        <button type="button" class="link-btn back-btn" id="backToSignIn">
+                            <i class="ph ph-arrow-left"></i> Back to Sign In
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="fpEmail">Email address</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-envelope input-icon"></i>
+                            <input type="email" id="fpEmail" placeholder="you@example.com" autocomplete="email" />
+                        </div>
+                    </div>
+                    <div class="feedback hidden" id="fpFeedback"></div>
+                    <button type="button" class="btn btn-primary" id="fpSubmit">
+                        <i class="ph ph-paper-plane-tilt btn-icon"></i>
+                        Send Reset Code
+                    </button>
+                </div>
+
+                <!-- ── Reset Password Form ── -->
+                <div class="auth-form hidden" id="resetForm">
+                    <div class="forgot-back">
+                        <button type="button" class="link-btn back-btn" id="backToForgot">
+                            <i class="ph ph-arrow-left"></i> Back
+                        </button>
+                    </div>
+                    <div class="reset-code-notice" id="resetCodeNotice"></div>
+                    <div class="form-group">
+                        <label for="rpCode">Reset Code</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-key input-icon"></i>
+                            <input type="text" id="rpCode" placeholder="6-digit code" maxlength="6" autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="rpNewPass">New Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock input-icon"></i>
+                            <input type="password" id="rpNewPass" placeholder="Min. 6 characters" autocomplete="new-password" />
+                            <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="rpConfirm">Confirm New Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock-key input-icon"></i>
+                            <input type="password" id="rpConfirm" placeholder="Re-enter new password" autocomplete="new-password" />
+                            <button type="button" class="toggle-password" tabindex="-1" aria-label="Toggle password">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="feedback hidden" id="rpFeedback"></div>
+                    <button type="button" class="btn btn-primary" id="rpSubmit">
+                        <i class="ph ph-lock-key-open btn-icon"></i>
+                        Reset Password
+                    </button>
+                </div>
 
                 <!-- ── Sign Up Form ── -->
                 <form class="auth-form hidden" id="signUpForm" novalidate>
@@ -164,4 +228,3 @@
 
     <script src="login.js"></script>
 </body>
-

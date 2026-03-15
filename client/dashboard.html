@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="style.css">
     <!-- Using Phosphor Icons for premium look -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        .cal-selectable:hover { background: var(--primary-light) !important; color: var(--primary) !important; transform: scale(1.06); }
+        #empCalendarGrid > div { transition: background 0.15s, transform 0.1s; }
+    </style>
 </head>
 
 <body>
@@ -16,7 +20,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <img src="images/logo.jpeg" alt="Sophia Academy"
-                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;">
+                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; margin-right: 5px;">
                 <div class="logo-text">SOPHIA-ACADEMY HR</div>
             </div>
             <nav class="sidebar-nav">
@@ -48,12 +52,6 @@
                 </button>
 
                 <div class="header-right" style="margin-left: auto;">
-                    <button class="btn btn-outline"
-                        style="border: none; border-radius: 50%; width: 40px; height: 40px; padding: 0; color: var(--text-muted); display: flex; align-items: center; justify-content: center; position: relative;">
-                        <i class="ph ph-bell" style="font-size: 20px;"></i>
-                        <span
-                            style="position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; background-color: var(--danger); border-radius: 50%;"></span>
-                    </button>
                     <div class="user-profile" style="cursor: pointer;">
                         <div class="avatar">AD</div>
                         <div class="user-info" style="display: flex; flex-direction: column;">
@@ -81,10 +79,6 @@
                         <h1 class="page-title" id="empWelcomeTitle">Welcome back! 👋</h1>
                         <p class="page-subtitle">Here's your personal overview for this month.</p>
                     </div>
-                    <a href="leave.html" class="btn btn-primary">
-                        <i class="ph ph-plus"></i>
-                        Apply for Leave
-                    </a>
                 </div>
 
                 <!-- ===== ADMIN dashboard content ===== -->
@@ -195,15 +189,13 @@
                                 </div>
                             </div>
                         </div>
-
-
-                        <!-- ===== EMPLOYEE dashboard content ===== -->
-                        <div class="employee-only" style="display:none;">
+                    </div>
+                </div>
+                <!-- ===== EMPLOYEE dashboard content ===== -->
+                <div class="employee-only" style="display:none;">
 
                             <!-- Personal Stats Row -->
-                            <div
-                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 28px;">
-                                <!-- Days Present This Month -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 28px;">
                                 <div class="card" style="border-top: 4px solid var(--primary);">
                                     <div class="card-body" style="text-align: center; padding: 24px 16px;">
                                         <div
@@ -211,14 +203,12 @@
                                             <i class="ph ph-calendar-check"></i>
                                         </div>
                                         <h2 id="empDaysPresent"
-                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">
-                                            -</h2>
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-</h2>
                                         <p class="text-muted" style="font-size: 13px; margin: 0;">Days Present</p>
                                         <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">This month</p>
                                     </div>
                                 </div>
 
-                                <!-- Days Absent -->
                                 <div class="card" style="border-top: 4px solid var(--danger);">
                                     <div class="card-body" style="text-align: center; padding: 24px 16px;">
                                         <div
@@ -226,14 +216,12 @@
                                             <i class="ph ph-calendar-x"></i>
                                         </div>
                                         <h2 id="empDaysAbsent"
-                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-
-                                        </h2>
+                                            style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-</h2>
                                         <p class="text-muted" style="font-size: 13px; margin: 0;">Days Absent</p>
                                         <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">This month</p>
                                     </div>
                                 </div>
 
-                                <!-- Approved Leaves -->
                                 <div class="card" style="border-top: 4px solid var(--success);">
                                     <div class="card-body" style="text-align: center; padding: 24px 16px;">
                                         <div
@@ -247,7 +235,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Pending Leaves -->
                                 <div class="card" style="border-top: 4px solid var(--warning);">
                                     <div class="card-body" style="text-align: center; padding: 24px 16px;">
                                         <div
@@ -257,72 +244,71 @@
                                         <h2 id="empPendingLeaves"
                                             style="font-size: 36px; font-weight: 700; margin: 0 0 4px;">-</h2>
                                         <p class="text-muted" style="font-size: 13px; margin: 0;">Pending Leaves</p>
-                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">Awaiting
-                                            approval
-                                        </p>
+                                        <p class="text-muted" style="font-size: 11px; margin: 4px 0 0;">Awaiting approval</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Calendar + Upcoming Leaves -->
-                            <div
-                                style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;">
+                            <!-- Full-Width Attendance Calendar -->
+                            <div class="card" style="margin-bottom: 24px;">
+                                <div class="card-body" style="padding: 24px;">
 
-                                <!-- Attendance Calendar -->
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div
-                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Attendance
-                                                Calendar
-                                            </h3>
-                                            <div style="display: flex; gap: 8px; align-items: center;">
-                                                <button id="calPrevMonth" class="btn btn-outline"
-                                                    style="padding: 4px 10px; font-size: 13px;">&larr;</button>
-                                                <span id="calMonthLabel"
-                                                    style="font-weight: 600; font-size: 14px; min-width: 110px; text-align: center;"></span>
-                                                <button id="calNextMonth" class="btn btn-outline"
-                                                    style="padding: 4px 10px; font-size: 13px;">&rarr;</button>
+                                    <!-- Calendar Header -->
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+                                        <div style="display:flex; align-items:center; gap:16px;">
+                                            <h3 style="font-size: 18px; font-weight: 700; margin: 0;">Attendance Calendar</h3>
+                                            <div style="display: flex; gap: 6px; align-items: center;">
+                                                <button id="calPrevMonth" class="btn btn-outline" style="padding: 6px 14px; font-size: 15px;">&larr;</button>
+                                                <span id="calMonthLabel" style="font-weight: 700; font-size: 16px; min-width: 150px; text-align: center;"></span>
+                                                <button id="calNextMonth" class="btn btn-outline" style="padding: 6px 14px; font-size: 15px;">&rarr;</button>
                                             </div>
                                         </div>
+                                        <button class="btn btn-primary" id="empApplyLeaveBtn" style="gap: 8px;">
+                                            <i class="ph ph-calendar-plus"></i>
+                                            Apply for Leave
+                                        </button>
+                                    </div>
 
-                                        <!-- Calendar Grid -->
-                                        <div id="empCalendarGrid"
-                                            style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center;">
-                                            <!-- Rendered by JS -->
-                                        </div>
+                                    <!-- Calendar Grid -->
+                                    <div id="empCalendarGrid"
+                                        style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;">
+                                        <!-- Rendered by JS -->
+                                    </div>
 
-                                        <!-- Legend -->
-                                        <div style="display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap;">
-                                            <span
-                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
-                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--success); display: inline-block;"></span>Present</span>
-                                            <span
-                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
-                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--warning); display: inline-block;"></span>Leave</span>
-                                            <span
-                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
-                                                    style="width: 12px; height: 12px; border-radius: 3px; background: rgba(239,68,68,0.25); display: inline-block;"></span>Absent</span>
-                                            <span
-                                                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);"><span
-                                                    style="width: 12px; height: 12px; border-radius: 3px; background: var(--border); display: inline-block;"></span>Weekend</span>
+                                    <!-- Selection action bar (shown when days are selected) -->
+                                    <div id="calSelectionBar" style="display:none; align-items:center; justify-content:space-between; margin-top:16px; padding:12px 16px; background:var(--primary-light); border-radius:10px; border:1.5px dashed var(--primary);">
+                                        <span style="font-size:14px; font-weight:600; color:var(--primary);">
+                                            <i class="ph ph-calendar-check" style="margin-right:6px;"></i>
+                                            <span id="calSelCount">0 days selected</span>
+                                        </span>
+                                        <div style="display:flex; gap:8px;">
+                                            <button type="button" id="calClearSelBtn" style="font-size:13px; padding:6px 14px; border:1px solid var(--primary); background:transparent; color:var(--primary); border-radius:6px; cursor:pointer; font-family:inherit; font-weight:600;">Clear</button>
+                                            <button type="button" id="calApplyLeaveBtn" class="btn btn-primary" style="font-size:13px; padding:7px 16px; margin-top:0;">
+                                                <i class="ph ph-paper-plane-tilt" style="margin-right:4px;"></i> Apply Leave
+                                            </button>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- Upcoming Leaves Panel -->
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h3
-                                            style="font-size: 16px; font-weight: 600; margin-top: 0; margin-bottom: 16px;">
-                                            My Leaves</h3>
-                                        <div id="empLeavesList"
-                                            style="display: flex; flex-direction: column; gap: 12px;">
-                                            <p class="text-muted" style="font-size: 13px;">Loading...</p>
-                                        </div>
-                                        <a href="leave.html"
-                                            style="display: block; margin-top: 16px; text-align: center; font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">View
-                                            all leave requests →</a>
+                                    <!-- Legend -->
+                                    <div style="display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap;">
+                                        <span style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-muted);"><span style="width: 14px; height: 14px; border-radius: 4px; background: var(--success); display: inline-block;"></span>Present</span>
+                                        <span style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-muted);"><span style="width: 14px; height: 14px; border-radius: 4px; background: var(--warning); display: inline-block;"></span>Leave</span>
+                                        <span style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-muted);"><span style="width: 14px; height: 14px; border-radius: 4px; background: rgba(239,68,68,0.3); display: inline-block;"></span>Absent</span>
+                                        <span style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-muted);"><span style="width: 14px; height: 14px; border-radius: 4px; background: var(--border); display: inline-block;"></span>Weekend</span>
+                                        <span style="display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-muted);"><span style="width: 14px; height: 14px; border-radius: 4px; background: var(--primary); display: inline-block;"></span>Selected for Leave</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- My Recent Leaves strip -->
+                            <div class="card">
+                                <div class="card-body">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                                        <h3 style="font-size: 16px; font-weight: 600; margin: 0;">My Recent Leaves</h3>
+                                        <a href="leave.html" style="font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">View all &rarr;</a>
+                                    </div>
+                                    <div id="empLeavesList" style="display: flex; flex-wrap: wrap; gap: 12px;">
+                                        <p class="text-muted" style="font-size: 13px;">Loading...</p>
                                     </div>
                                 </div>
                             </div>
@@ -331,6 +317,62 @@
                         <!-- ===== END EMPLOYEE dashboard content ===== -->
 
             </main>
+        </div>
+    </div>
+
+    <!-- ── Quick Leave Modal (Employee Dashboard) ── -->
+    <div class="modal-overlay" id="quickLeaveModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="ph ph-calendar-plus" style="margin-right:6px;"></i>Apply for Leave</h2>
+                <button class="modal-close"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Auto-filled employee info -->
+                <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg-page); border-radius:10px; margin-bottom:16px; border:1px solid var(--border);">
+                    <div class="avatar" id="qlAvatar" style="width:44px;height:44px;font-size:16px;flex-shrink:0;">U</div>
+                    <div>
+                        <div style="font-weight:700; font-size:14px;" id="qlName">-</div>
+                        <div style="font-size:12px; color:var(--text-muted);" id="qlEmail">-</div>
+                    </div>
+                </div>
+                <!-- Pre-filled date badge (when selected from calendar) -->
+                <div id="qlDateBadge" style="display:none; padding:9px 12px; background:var(--primary-light); border-radius:8px; font-size:13px; font-weight:600; color:var(--primary); margin-bottom:16px;"></div>
+                <form id="quickLeaveForm">
+                    <input type="hidden" id="qlEmployeeId">
+                    <div class="form-group">
+                        <label class="form-label">Leave Type</label>
+                        <select class="form-control" id="qlLeaveType" required>
+                            <option value="" disabled selected>Select type...</option>
+                            <option value="annual">Annual Leave</option>
+                            <option value="sick">Sick Leave</option>
+                            <option value="unpaid">Unpaid Leave</option>
+                            <option value="maternity">Maternity / Paternity</option>
+                        </select>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="qlStartDate" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="qlEndDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" id="qlReason" rows="3" placeholder="Describe the reason for your leave request..." required></textarea>
+                    </div>
+                </form>
+                <p id="qlFeedback" style="margin-top:10px; font-size:13px;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" data-close-modal>Cancel</button>
+                <button class="btn btn-primary" id="qlSubmitBtn">
+                    <i class="ph ph-paper-plane-tilt" style="margin-right:4px;"></i>Submit Request
+                </button>
+            </div>
         </div>
     </div>
 

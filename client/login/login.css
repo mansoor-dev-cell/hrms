@@ -403,6 +403,45 @@ html, body {
 /* ── Spinner ────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Forgot / Reset password ────────────── */
+.forgot-back {
+    margin-bottom: 4px;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.855rem;
+    font-weight: 600;
+}
+
+.back-btn i { font-size: 15px; }
+
+.forgot-link {
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.reset-code-notice {
+    background: var(--primary-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 11px 14px;
+    font-size: 0.845rem;
+    color: var(--text-main);
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.reset-code-notice strong {
+    display: block;
+    font-size: 1.15rem;
+    letter-spacing: 0.15em;
+    color: var(--primary);
+    margin-top: 4px;
+}
+
 /* ── Responsive ─────────────────────────── */
 @media (max-width: 860px) {
     .auth-layout { grid-template-columns: 1fr; }
