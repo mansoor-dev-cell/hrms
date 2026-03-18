@@ -66,11 +66,12 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Protected pages now load in a neutral `role-pending` state, so stale cached role data cannot briefly reveal the wrong admin or employee sections.
 -   Result: role-specific UI only appears after the server confirms the active user.
 
-### 8. Invalid or expired token is not handled cleanly
+### ~~8. Invalid or expired token is not handled cleanly~~
 
 -   File: client/script.js
--   If `/api/auth/me` fails, the app logs an error but does not clear the bad token and does not redirect to login.
--   Result: users can remain on broken pages with stale role data and partial UI.
+-   Resolved by centralizing API calls through `apiFetch()`, which clears auth state and redirects to login on `401` responses.
+-   Initial profile load now uses the same guarded path, so invalid/expired tokens cannot leave users on partial protected pages.
+-   Result: stale tokens are cleaned up immediately and the session returns to a consistent login state.
 
 ## Dummy or misleading UI
 
