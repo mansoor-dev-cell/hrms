@@ -18,6 +18,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function isAdminRole(user) {
+  return user && String(user.role).toLowerCase() === "admin";
+}
+
+async function authenticateToken(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "No token provided." });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({ message: "User not found." });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(401).json({ message: "Invalid token.", error: err.message });
+  }
+}
+
+function requireAdmin(req, res, next) {
+  if (!isAdminRole(req.user)) {
+    return res.status(403).json({ message: "Admin access is required." });
+  }
+
+  next();
+}
+
 // ── MongoDB connection ──────────────────────────────────────
 mongoose
   .connect(process.env.MONGO_URI)
@@ -177,34 +211,23 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
 // ── Current User ───────────────────────────────────────────
 // GET /api/auth/me
-app.get("/api/auth/me", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "No token provided." });
-    }
+app.get("/api/auth/me", authenticateToken, async (req, res) => {
+  const user = req.user;
 
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found." });
-
-    res.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      joinDate: user.joinDate,
-    });
-  } catch (err) {
-    res.status(401).json({ message: "Invalid token.", error: err.message });
-  }
+  res.json({
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    department: user.department,
+    joinDate: user.joinDate,
+    status: user.status,
+  });
 });
 
 // ── Users ──────────────────────────────────────────────────
 // GET /api/users
-app.get("/api/users", async (req, res) => {
+app.get("/api/users", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.json(users);
@@ -215,9 +238,11 @@ app.get("/api/users", async (req, res) => {
 
 // ── Attendance ─────────────────────────────────────────────
 // GET /api/attendance
-app.get("/api/attendance", async (req, res) => {
+app.get("/api/attendance", authenticateToken, async (req, res) => {
   try {
-    const records = await Attendance.find()
+    const records = await Attendance.find(
+      isAdminRole(req.user) ? {} : { employeeId: req.user._id },
+    )
       .populate("employeeId", "name department role")
       .sort({ date: -1, createdAt: -1 });
     res.json(records);
@@ -227,19 +252,28 @@ app.get("/api/attendance", async (req, res) => {
 });
 
 // POST /api/attendance
-app.post("/api/attendance", async (req, res) => {
+app.post("/api/attendance", authenticateToken, async (req, res) => {
   try {
     const { employeeId, date, checkIn, checkOut, status, notes } = req.body;
+    const targetEmployeeId = isAdminRole(req.user) ? employeeId : req.user._id;
 
-    if (!employeeId || !date) {
-      return res.status(400).json({ message: "Employee and date are required." });
+    if (!targetEmployeeId || !date) {
+      return res
+        .status(400)
+        .json({ message: "Employee and date are required." });
     }
 
     // Try to update existing or create new
     const record = await Attendance.findOneAndUpdate(
-      { employeeId, date },
-      { checkIn, checkOut, status, notes },
-      { new: true, upsert: true }
+      { employeeId: targetEmployeeId, date },
+      {
+        employeeId: targetEmployeeId,
+        checkIn,
+        checkOut,
+        status,
+        notes,
+      },
+      { new: true, upsert: true },
     ).populate("employeeId", "name department role");
 
     res.status(201).json({ message: "Attendance saved successfully.", record });
@@ -250,9 +284,11 @@ app.post("/api/attendance", async (req, res) => {
 
 // ── Leaves ─────────────────────────────────────────────────
 // GET /api/leaves
-app.get("/api/leaves", async (req, res) => {
+app.get("/api/leaves", authenticateToken, async (req, res) => {
   try {
-    const leaves = await Leave.find()
+    const leaves = await Leave.find(
+      isAdminRole(req.user) ? {} : { employeeId: req.user._id },
+    )
       .populate("employeeId", "name department role")
       .sort({ createdAt: -1 });
     res.json(leaves);
@@ -262,45 +298,62 @@ app.get("/api/leaves", async (req, res) => {
 });
 
 // POST /api/leaves
-app.post("/api/leaves", async (req, res) => {
+app.post("/api/leaves", authenticateToken, async (req, res) => {
   try {
     const { employeeId, type, startDate, endDate, reason } = req.body;
+    const targetEmployeeId = isAdminRole(req.user) ? employeeId : req.user._id;
 
-    if (!employeeId || !type || !startDate || !endDate || !reason) {
+    if (!targetEmployeeId || !type || !startDate || !endDate || !reason) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    const leave = new Leave({ employeeId, type, startDate, endDate, reason });
+    const leave = new Leave({
+      employeeId: targetEmployeeId,
+      type,
+      startDate,
+      endDate,
+      reason,
+    });
     await leave.save();
 
-    const populated = await leave.populate("employeeId", "name department role");
-    res.status(201).json({ message: "Leave request submitted.", record: populated });
+    const populated = await leave.populate(
+      "employeeId",
+      "name department role",
+    );
+    res
+      .status(201)
+      .json({ message: "Leave request submitted.", record: populated });
   } catch (err) {
     res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
 
 // PUT /api/leaves/:id
-app.put("/api/leaves/:id", async (req, res) => {
-  try {
-    const { status } = req.body;
-    if (!["pending", "approved", "rejected"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status." });
+app.put(
+  "/api/leaves/:id",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["pending", "approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status." });
+      }
+
+      const leave = await Leave.findByIdAndUpdate(
+        req.params.id,
+        { status },
+        { new: true },
+      ).populate("employeeId", "name department role");
+
+      if (!leave) return res.status(404).json({ message: "Leave not found." });
+
+      res.json({ message: `Leave ${status}.`, record: leave });
+    } catch (err) {
+      res.status(500).json({ message: "Server error.", error: err.message });
     }
-
-    const leave = await Leave.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    ).populate("employeeId", "name department role");
-
-    if (!leave) return res.status(404).json({ message: "Leave not found." });
-
-    res.json({ message: `Leave ${status}.`, record: leave });
-  } catch (err) {
-    res.status(500).json({ message: "Server error.", error: err.message });
-  }
-});
+  },
+);
 
 // ── Legacy: Create admin (unchanged) ──────────────────────
 app.post("/create-admin", async (req, res) => {

@@ -74,6 +74,15 @@ body {
     overflow-x: hidden;
 }
 
+body.role-pending .app-container {
+    visibility: hidden;
+}
+
+body.role-admin .employee-only,
+body.role-employee .admin-only {
+    display: none !important;
+}
+
 /* Layout */
 .app-container {
     display: flex;

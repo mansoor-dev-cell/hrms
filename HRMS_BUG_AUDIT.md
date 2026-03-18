@@ -43,12 +43,17 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## Role and access inconsistencies
 
-### 6. Admin and employee UI separation depends only on client-side toggling
+### ~~6. Admin and employee UI separation depends only on client-side toggling~~
 
 -   File: client/script.js
--   All role separation is done with `.admin-only` and `.employee-only` DOM toggling in the browser.
--   Restricted navigation and page access are not enforced server-side.
--   Result: this is easy to bypass and can also create UI inconsistencies if cached user data is stale.
+-   File: client/dashboard.html
+-   File: client/leave.html
+-   File: client/emp.html
+-   File: client/attendance.html
+-   File: server/server.js
+-   Resolved by requiring a verified bearer token on role-sensitive API routes, enforcing admin-only access on user directory and leave-approval actions, and scoping attendance and leave writes to the signed-in user when the caller is not an admin.
+-   Protected pages now start in a neutral `role-pending` state and only reveal role-specific sections after `/api/auth/me` confirms the active user.
+-   Result: admin-only data and actions are no longer exposed just because the browser toggled CSS classes.
 
 ### 7. Cached user role can briefly render the wrong UI
 

@@ -3,12 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname;
     const isAuthPage = currentPath.endsWith('login.html') || currentPath.endsWith('signup.html');
 
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const token = getAuthToken();
 
     if (!token && !isAuthPage) {
         // Not logged in and trying to access a protected page
-        window.location.href = '../client/login/login.html';
+    redirectToLoginPage();
         return; // Stop execution
     }
 
@@ -59,15 +58,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleLogout() {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "login/login.html";
+      clearAuthState();
+      redirectToLoginPage();
     }
 
     // -- Role-Based Access Control --
     function applyRoleBasedAccess(userData) {
-        const role = (userData && userData.role) ? userData.role.toLowerCase() : 'employee';
-        const isAdmin = role === 'admin';
+        const isAdmin = isAdminRole(userData);
+
+        document.body.classList.remove(
+          "role-pending",
+          "role-admin",
+          "role-employee",
+        );
+        document.body.classList.add(isAdmin ? "role-admin" : "role-employee");
 
         // Show/hide elements marked as admin-only
         document.querySelectorAll('.admin-only').forEach(el => {
@@ -83,15 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const restrictedPages = ['emp.html', 'attendance.html'];
         if (!isAdmin && restrictedPages.includes(page)) {
             window.location.href = 'dashboard.html';
+      return false;
         }
+
+    return true;
     }
 
     // -- Initialize page content based on verified role from API --
     function initPageContent(verifiedUser) {
         updateProfileDOM(verifiedUser);
-        applyRoleBasedAccess(verifiedUser);
+    if (!applyRoleBasedAccess(verifiedUser)) {
+      return;
+    }
 
-        const isAdmin = verifiedUser && verifiedUser.role && verifiedUser.role.toLowerCase() === 'admin';
+    const isAdmin = isAdminRole(verifiedUser);
 
         if (page === 'emp.html') {
             fetchAndDisplayUsers();
@@ -125,9 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchCurrentUser(authToken) {
         try {
-            const res = await fetch('http://localhost:5000/api/auth/me', {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
+        const res = await apiFetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
             if (res.ok) {
                 const freshUser = await res.json();
                 // Always persist the latest role from the server
@@ -137,6 +146,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Failed to fetch current user profile:', error);
+        if (
+          !document.body.classList.contains("role-admin") &&
+          !document.body.classList.contains("role-employee")
+        ) {
+          clearAuthState();
+          redirectToLoginPage();
+        }
         }
     }
 
@@ -202,23 +218,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Fast first-paint with cached user (updates sidebar/avatar instantly)
-    // Then always fetch fresh from API which will call initPageContent again with authoritative role
-    if (user && !isAuthPage) {
-        updateProfileDOM(user);
-        applyRoleBasedAccess(user);
-    }
     if (token && !isAuthPage) {
-        // This fetches fresh user from server and calls initPageContent with correct role
-        fetchCurrentUser(token);
-    } else if (!token && !isAuthPage) {
-        // Fallback: use cached user to init page if somehow token is missing
-        if (user) initPageContent(user);
+      fetchCurrentUser(token);
     }
 });
 
 let allEmployeesData = []; // Store globally for client-side search
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
+const API_BASE_URL = "http://localhost:5000";
+
+function getAuthToken() {
+  return localStorage.getItem("token") || "";
+}
+
+function getStoredUser() {
+  return JSON.parse(localStorage.getItem("user") || "null");
+}
+
+function clearAuthState() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+}
+
+function redirectToLoginPage() {
+  const currentPath = window.location.pathname;
+  window.location.href = currentPath.includes("/login/")
+    ? "login.html"
+    : "login/login.html";
+}
+
+function isAdminRole(userData) {
+  return !!userData && String(userData.role || "").toLowerCase() === "admin";
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const token = getAuthToken();
+
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    clearAuthState();
+    redirectToLoginPage();
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  if (response.status === 403) {
+    throw new Error("You do not have access to this resource.");
+  }
+
+  return response;
+}
 
 function getRecordId(entity) {
   if (!entity) return "";
@@ -269,7 +326,7 @@ async function fetchAndDisplayUsers() {
     if (!tbody) return;
 
     try {
-        const response = await fetch('http://localhost:5000/api/users');
+    const response = await apiFetch("/api/users");
         if (!response.ok) {
             throw new Error('Failed to fetch users');
         }
@@ -401,8 +458,8 @@ async function fetchAndDisplayAttendance() {
 
     try {
         const [usersResponse, attendanceResponse] = await Promise.all([
-            fetch('http://localhost:5000/api/users'),
-            fetch('http://localhost:5000/api/attendance')
+          apiFetch("/api/users"),
+          apiFetch("/api/attendance"),
         ]);
 
         if (!usersResponse.ok || !attendanceResponse.ok) {
@@ -558,7 +615,7 @@ async function populateEmployeeDropdown(dropdownId = 'attEmployee') {
     if (!dropdown) return;
 
     try {
-        const response = await fetch('http://localhost:5000/api/users');
+    const response = await apiFetch("/api/users");
         if (!response.ok) return;
 
         const users = await response.json();
@@ -600,11 +657,11 @@ async function submitAttendanceRecord(e) {
 
     try {
         const payload = { employeeId, date, status, checkIn, checkOut, notes };
-        const response = await fetch('http://localhost:5000/api/attendance', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+      const response = await apiFetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
         const data = await response.json();
 
@@ -645,19 +702,12 @@ async function fetchAndDisplayLeaves() {
     if (!tbody) return;
 
     try {
-        const response = await fetch('http://localhost:5000/api/leaves');
+        const response = await apiFetch("/api/leaves");
         if (!response.ok) throw new Error('Failed to fetch leave records');
 
         const leaves = await response.json();
 
-        // If not admin, only show the current user's own leave requests
-        const loggedInUser = JSON.parse(localStorage.getItem('user') || 'null');
-        const isAdmin = loggedInUser && loggedInUser.role === 'admin';
-        allLeavesData = isAdmin
-          ? leaves
-          : leaves.filter((leave) =>
-              isSameUserRecord(leave.employeeId, loggedInUser),
-            );
+        allLeavesData = leaves;
 
         // Update Stats
         let pending = 0;
@@ -748,8 +798,8 @@ function renderLeavesTable(leavesToRender) {
         const statusStr = l.status.charAt(0).toUpperCase() + l.status.slice(1);
 
         let actionButtons = '';
-        const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
-        const currentUserIsAdmin = currentUser && currentUser.role === 'admin';
+        const currentUser = getStoredUser();
+        const currentUserIsAdmin = isAdminRole(currentUser);
 
         if (currentUserIsAdmin && l.status === 'pending') {
             actionButtons = `
@@ -875,11 +925,11 @@ async function submitLeaveRequest(e) {
 
     try {
         const payload = { employeeId, type, startDate, endDate, reason };
-        const response = await fetch('http://localhost:5000/api/leaves', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+      const response = await apiFetch("/api/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Failed to submit request');
@@ -911,11 +961,11 @@ async function submitLeaveRequest(e) {
 
 async function updateLeaveStatus(leaveId, newStatus) {
     try {
-        const response = await fetch(`http://localhost:5000/api/leaves/${leaveId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-        });
+    const response = await apiFetch(`/api/leaves/${leaveId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
 
         if (response.ok) {
             fetchAndDisplayLeaves(); // Refresh the table automatically
@@ -939,7 +989,7 @@ function updateNotificationBell(count) {
 
 // --- Employee Dashboard Logic ─────────────────────────────────────────────────
 async function fetchEmployeeDashboardData() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = getStoredUser();
     if (!user) return;
 
     // Greet by name
@@ -948,8 +998,8 @@ async function fetchEmployeeDashboardData() {
 
     try {
       const [attRes, leavesRes] = await Promise.all([
-        fetch("http://localhost:5000/api/attendance"),
-        fetch("http://localhost:5000/api/leaves"),
+        apiFetch("/api/attendance"),
+        apiFetch("/api/leaves"),
       ]);
 
       const allAttendance = attRes.ok ? await attRes.json() : [];
@@ -1216,7 +1266,7 @@ async function fetchEmployeeDashboardData() {
               if (isSun && !status && !isFuture) {
                 // Mark Sunday as working day
                 cell.title = "Saving…";
-                fetch("http://localhost:5000/api/attendance", {
+                apiFetch("/api/attendance", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
@@ -1350,7 +1400,7 @@ async function fetchEmployeeDashboardData() {
 
 // ── Quick Leave Modal (employee dashboard) ─────────────────────────────────────
 function openQuickLeaveModal(datesSet) {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = getStoredUser();
     if (!user) return;
 
     const qlAvatar = document.getElementById('qlAvatar');
@@ -1412,11 +1462,11 @@ async function submitQuickLeave() {
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
     try {
-        const res  = await fetch('http://localhost:5000/api/leaves', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ employeeId, type, startDate, endDate, reason })
-        });
+      const res = await apiFetch("/api/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId, type, startDate, endDate, reason }),
+      });
         const data = await res.json();
 
         if (!res.ok) {
@@ -1443,7 +1493,7 @@ async function submitQuickLeave() {
 
 // ── Leave page role setup ───────────────────────────────────────────────────────
 function setupLeaveFormForRole(user) {
-    const isAdmin       = user && user.role === 'admin';
+  const isAdmin = isAdminRole(user);
     const dropdownGroup = document.getElementById('leaveEmpDropdownGroup');
     const empInfo       = document.getElementById('leaveEmpInfo');
     const leaveEmployee = document.getElementById('leaveEmployee');
@@ -1497,9 +1547,9 @@ function setupLeaveFormForRole(user) {
 async function fetchDashboardData() {
     try {
         const [usersRes, attendanceRes, leavesRes] = await Promise.all([
-            fetch('http://localhost:5000/api/users'),
-            fetch('http://localhost:5000/api/attendance'),
-            fetch('http://localhost:5000/api/leaves')
+          apiFetch("/api/users"),
+          apiFetch("/api/attendance"),
+          apiFetch("/api/leaves"),
         ]);
 
         if (!usersRes.ok || !attendanceRes.ok || !leavesRes.ok) {
