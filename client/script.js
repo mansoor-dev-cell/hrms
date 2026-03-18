@@ -28,8 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       userDeptEls.forEach((el) => {
-        const dept = userData.department || "Sophia Academy";
-        const sub = userData.subDepartment || "Teaching Staff";
+        const normalized = normalizeDeptSubDept(
+          userData.department,
+          userData.subDepartment,
+        );
+        const dept = normalized.department;
+        const sub = normalized.subDepartment;
         el.textContent = `${dept} - ${sub}`;
       });
 
@@ -235,6 +239,10 @@ let employeeCurrentPage = 1;
 const EMPLOYEE_PAGE_SIZE = 5;
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
 const API_BASE_URL = resolveApiBaseUrl();
+const DEPARTMENT_MAP = {
+  "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
+  "Global Online College": ["Sales Team", "Marketing Team"],
+};
 
 function normalizeBaseUrl(url) {
   return String(url || "")
@@ -243,6 +251,16 @@ function normalizeBaseUrl(url) {
 }
 
 function resolveApiBaseUrl() {
+  if (
+    typeof window !== "undefined" &&
+    window.location?.hostname &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  ) {
+    // Always target Express backend in local development.
+    return "http://localhost:5000";
+  }
+
   const fromWindow =
     typeof window !== "undefined" &&
     typeof window.__HRMS_API_BASE_URL === "string"
@@ -267,7 +285,26 @@ function resolveApiBaseUrl() {
       : "";
 
   const configured = normalizeBaseUrl(fromWindow || fromStorage || fromMeta);
-  if (configured) return configured;
+  if (configured) {
+    if (
+      typeof window !== "undefined" &&
+      window.location?.hostname &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1")
+    ) {
+      try {
+        const parsed = new URL(configured);
+        const isLocalConfigured =
+          parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+        if (isLocalConfigured && parsed.port !== "5000") {
+          return "http://localhost:5000";
+        }
+      } catch {
+        // Keep configured value when it is not a parseable absolute URL.
+      }
+    }
+    return configured;
+  }
 
   if (typeof window !== "undefined" && window.location?.protocol === "file:") {
     return "http://localhost:5000";
@@ -344,6 +381,22 @@ function getRecordId(entity) {
   if (!entity) return "";
   if (typeof entity === "string") return entity;
   return String(entity.id || entity._id || "");
+}
+
+function normalizeDeptSubDept(department, subDepartment) {
+  const deptRaw = String(department || "").trim();
+  const normalizedDept = DEPARTMENT_MAP[deptRaw] ? deptRaw : "Sophia Academy";
+  const validSubDepartments = DEPARTMENT_MAP[normalizedDept];
+
+  const subRaw = String(subDepartment || "").trim();
+  const normalizedSubDept = validSubDepartments.includes(subRaw)
+    ? subRaw
+    : validSubDepartments[0];
+
+  return {
+    department: normalizedDept,
+    subDepartment: normalizedSubDept,
+  };
 }
 
 function isSameUserRecord(recordUser, currentUser) {
@@ -451,7 +504,7 @@ function renderEmployeePage() {
 
   if (!filteredEmployeesData.length) {
     tbody.innerHTML =
-      '<tr><td colspan="5" style="text-align: center; padding: 20px;" class="text-muted">No employees found.</td></tr>';
+      '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">No employees found.</td></tr>';
     const countText = document.getElementById("employeeCountText");
     if (countText) countText.textContent = "Showing 0 to 0 of 0 entries";
     return;
@@ -469,6 +522,7 @@ function renderEmployeePage() {
   ];
 
   pageRows.forEach((user, index) => {
+    const userId = getRecordId(user);
     const initials = user.name ? user.name.substring(0, 2).toUpperCase() : "U";
     const colorTheme = colors[(startIndex + index) % colors.length];
 
@@ -481,12 +535,10 @@ function renderEmployeePage() {
         })
       : "N/A";
 
-    const department = user.department || "Sophia Academy";
-    const subDepartment = user.subDepartment || "Teaching Staff";
-    const roleStr = user.role
-      ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-      : "Employee";
-
+    const { department, subDepartment } = normalizeDeptSubDept(
+      user.department,
+      user.subDepartment,
+    );
     const status = user.status || "Active";
     let badgeClass = "success";
     if (status.toLowerCase().includes("leave")) badgeClass = "warning";
@@ -509,7 +561,6 @@ function renderEmployeePage() {
       </td>
       <td style="vertical-align: middle;">${department}</td>
       <td style="vertical-align: middle;">${subDepartment}</td>
-      <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
       <td style="vertical-align: middle;" class="text-muted">${joinDate}</td>
       <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${status}</span></td>
 
@@ -518,7 +569,26 @@ function renderEmployeePage() {
     const actionsCell = document.createElement("td");
     actionsCell.style.verticalAlign = "middle";
     actionsCell.className = "admin-only";
-    actionsCell.innerHTML = `<button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="openEditEmployeeModal('${user._id}', '${user.role || "employee"}', '${(user.department || "Sophia Academy").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${(user.subDepartment || "Teaching Staff").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${user.status || "Active"}')"><i class="ph ph-pencil"></i> Edit</button>`;
+    if (userId) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "btn btn-outline";
+      editBtn.style.cssText = "padding: 4px 10px; font-size: 12px;";
+      editBtn.innerHTML = '<i class="ph ph-pencil"></i> Edit';
+      editBtn.addEventListener("click", () => {
+        openEditEmployeeModal(
+          userId,
+          department,
+          subDepartment,
+          status,
+          user.email,
+        );
+      });
+      actionsCell.appendChild(editBtn);
+    } else {
+      actionsCell.innerHTML =
+        '<span class="text-muted" style="font-size: 12px;">Missing ID</span>';
+    }
     tr.appendChild(actionsCell);
     tbody.appendChild(tr);
   });
@@ -635,15 +705,20 @@ function setupEmployeeSearch() {
         const filtered = allEmployeesData.filter(user => {
             const nameMatch = user.name && user.name.toLowerCase().includes(term);
             const emailMatch = user.email && user.email.toLowerCase().includes(term);
-            const roleMatch = user.role && user.role.toLowerCase().includes(term);
-            const textMatch = term === '' ? true : (nameMatch || emailMatch || roleMatch);
+            const deptTermMatch =
+              (user.department &&
+                user.department.toLowerCase().includes(term)) ||
+              (user.subDepartment &&
+                user.subDepartment.toLowerCase().includes(term));
+            const textMatch =
+              term === "" ? true : nameMatch || emailMatch || deptTermMatch;
 
-            const userDept = (
-              user.department || "Sophia Academy"
-            ).toLowerCase();
-            const userSubDept = (
-              user.subDepartment || "Teaching Staff"
-            ).toLowerCase();
+            const normalized = normalizeDeptSubDept(
+              user.department,
+              user.subDepartment,
+            );
+            const userDept = normalized.department.toLowerCase();
+            const userSubDept = normalized.subDepartment.toLowerCase();
             const deptMatch =
               dept === ""
                 ? true
@@ -798,6 +873,10 @@ function renderAttendanceRows() {
         ? `<span class="text-muted">--:--</span>`
         : `<span class="${record.status === "late" ? "text-warning" : ""} fw-semibold">${record.checkIn}</span>`;
 
+    const normalizedDept = normalizeDeptSubDept(
+      user.department,
+      user.subDepartment,
+    );
     const tr = document.createElement("tr");
     tr.innerHTML = `
             <td>
@@ -807,7 +886,7 @@ function renderAttendanceRows() {
                     </div>
                     <div>
                         <div class="fw-semibold text-main">${user.name}</div>
-                        <div class="text-muted" style="font-size: 12px;">${user.department || "Sophia Academy"} - ${user.subDepartment || "Teaching Staff"}</div>
+                      <div class="text-muted" style="font-size: 12px;">${normalizedDept.department} - ${normalizedDept.subDepartment}</div>
                     </div>
                 </div>
             </td>
@@ -913,7 +992,11 @@ async function populateEmployeeDropdown(dropdownId = 'attEmployee') {
         users.forEach(u => {
             const opt = document.createElement('option');
             opt.value = u._id;
-            opt.textContent = `${u.name} - ${u.department || "Sophia Academy"} / ${u.subDepartment || "Teaching Staff"}`;
+          const normalized = normalizeDeptSubDept(
+            u.department,
+            u.subDepartment,
+          );
+          opt.textContent = `${u.name} - ${normalized.department} / ${normalized.subDepartment}`;
             dropdown.appendChild(opt);
         });
     } catch (err) {
@@ -1159,6 +1242,10 @@ function renderLeavesTable(leavesToRender) {
             `;
         }
 
+        const normalizedDept = normalizeDeptSubDept(
+          user.department,
+          user.subDepartment,
+        );
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
@@ -1168,7 +1255,7 @@ function renderLeavesTable(leavesToRender) {
                     </div>
                     <div>
                         <div class="fw-semibold text-main">${user.name}</div>
-                        <div class="text-muted" style="font-size: 12px;">${user.department || 'General'}</div>
+                      <div class="text-muted" style="font-size: 12px;">${normalizedDept.department} - ${normalizedDept.subDepartment}</div>
                     </div>
                 </div>
             </td>
@@ -1179,7 +1266,7 @@ function renderLeavesTable(leavesToRender) {
             <td style="vertical-align: middle;">
                 <div class="text-main">${dateStr}</div>
             </td>
-            <td style="vertical-align: middle;" class="fw-semibold">${durationDays} Day${durationDays > 1 ? 's' : ''}</td>
+            <td style="vertical-align: middle;" class="fw-semibold">${durationDays} Day${durationDays > 1 ? "s" : ""}</td>
             <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}" style="${badgeStyle}">${statusStr}</span></td>
             <td style="vertical-align: middle;">
                 <div style="display: flex; gap: 8px;">
@@ -1856,7 +1943,7 @@ async function submitQuickLeave() {
     }
 }
 
-// ── Leave page role setup ───────────────────────────────────────────────────────
+// ── Leave page access setup ─────────────────────────────────────────────────────
 function setupLeaveFormForRole(user) {
   const isAdmin = isAdminRole(user);
     const dropdownGroup = document.getElementById('leaveEmpDropdownGroup');
@@ -1883,14 +1970,16 @@ function setupLeaveFormForRole(user) {
         if (searchWrap)    searchWrap.style.display    = 'none';
 
         const nameEl   = document.getElementById('leaveModalName');
-        const roleEl   = document.getElementById('leaveModalRole');
+        const deptEl = document.getElementById("leaveModalDept");
         const avatarEl = document.getElementById('leaveModalAvatar');
         if (nameEl)   nameEl.textContent   = user.name || 'You';
-        if (roleEl)
-          roleEl.textContent =
-            user.department && user.subDepartment
-              ? `${user.department} - ${user.subDepartment}`
-              : user.department || "Sophia Academy - Teaching Staff";
+        if (deptEl) {
+          const normalized = normalizeDeptSubDept(
+            user.department,
+            user.subDepartment,
+          );
+          deptEl.textContent = `${normalized.department} - ${normalized.subDepartment}`;
+        }
         if (avatarEl) {
             const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'U';
             avatarEl.textContent = initials;
@@ -2052,9 +2141,10 @@ async function fetchDashboardData() {
             top5.forEach((user, index) => {
                 const initials = user.name ? user.name.substring(0, 2).toUpperCase() : 'U';
                 const colorTheme = colors[index % colors.length];
-                const department = user.department || "Sophia Academy";
-                const subDepartment = user.subDepartment || "Teaching Staff";
-                const roleStr = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee';
+                const { department, subDepartment } = normalizeDeptSubDept(
+                  user.department,
+                  user.subDepartment,
+                );
                 const joinDate = user.joinDate || user.createdAt;
                 const dateStr = joinDate ? new Date(joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'N/A';
 
@@ -2072,7 +2162,6 @@ async function fetchDashboardData() {
                         </div>
                     </td>
                     <td style="vertical-align: middle;">${department} - ${subDepartment}</td>
-                    <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
                     <td style="vertical-align: middle;" class="text-muted">${dateStr}</td>
 
                 `;
@@ -2091,21 +2180,49 @@ const SUB_DEPT_MAP = {
   "Global Online College": ["Sales Team", "Marketing Team"],
 };
 
-function openEditEmployeeModal(id, role, department, subDepartment, status) {
+function openEditEmployeeModal(id, department, subDepartment, status, email) {
   const modal = document.getElementById("editEmployeeModal");
   if (!modal) return;
 
   document.getElementById("editEmpId").value = id;
-  document.getElementById("editEmpRole").value = role || "employee";
+  const normalized = normalizeDeptSubDept(department, subDepartment);
   const deptSelect = document.getElementById("editEmpDept");
-  deptSelect.value = department || "Sophia Academy";
-  refreshSubDeptOptions(deptSelect.value, subDepartment);
+  deptSelect.value = normalized.department;
+  refreshSubDeptOptions(deptSelect.value, normalized.subDepartment);
   document.getElementById("editEmpStatus").value = status || "Active";
 
   const feedback = document.getElementById("editEmpFeedback");
-  if (feedback) { feedback.textContent = ""; feedback.className = "feedback hidden"; }
+  if (feedback) {
+    feedback.textContent = "";
+    feedback.className = "feedback hidden";
+  }
+
+  modal.dataset.employeeEmail = String(email || "").trim();
 
   modal.classList.add("active");
+}
+
+async function patchEmployeeById(id, payload) {
+  const requestPath = `/api/users/${encodeURIComponent(String(id || "").trim())}`;
+  return apiFetch(requestPath, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function resolveEmployeeIdByEmail(email) {
+  if (!email) return "";
+  const usersRes = await apiFetch("/api/users");
+  if (!usersRes.ok) return "";
+
+  const users = await usersRes.json().catch(() => []);
+  const target = String(email).toLowerCase();
+  const matched = Array.isArray(users)
+    ? users.find((u) => String(u?.email || "").toLowerCase() === target)
+    : null;
+
+  return getRecordId(matched);
 }
 
 function refreshSubDeptOptions(dept, selected) {
@@ -2129,35 +2246,48 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function saveEmployeeChanges() {
-  const id = document.getElementById("editEmpId").value;
-  const role = document.getElementById("editEmpRole").value;
-  const department = document.getElementById("editEmpDept").value;
-  const subDepartment = document.getElementById("editEmpSubDept").value;
+  const id = String(document.getElementById("editEmpId").value || "").trim();
+  const normalized = normalizeDeptSubDept(
+    document.getElementById("editEmpDept").value,
+    document.getElementById("editEmpSubDept").value,
+  );
+  const department = normalized.department;
+  const subDepartment = normalized.subDepartment;
   const status = document.getElementById("editEmpStatus").value;
   const feedback = document.getElementById("editEmpFeedback");
   const saveBtn = document.getElementById("saveEditEmpBtn");
+  const modal = document.getElementById("editEmployeeModal");
+  const modalEmail = modal?.dataset?.employeeEmail || "";
 
   if (!id) return;
 
   setLoading(saveBtn, true);
   try {
-    const res = await apiFetch(`/api/users/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role, department, subDepartment, status }),
-    });
-    const data = await res.json();
+    const payload = { department, subDepartment, status };
+    let res = await patchEmployeeById(id, payload);
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok && res.status === 404 && modalEmail) {
+      const resolvedId = await resolveEmployeeIdByEmail(modalEmail);
+      if (resolvedId && resolvedId !== id) {
+        document.getElementById("editEmpId").value = resolvedId;
+        res = await patchEmployeeById(resolvedId, payload);
+      }
+    }
 
     if (!res.ok) {
-      feedback.textContent = data.message || "Failed to save changes.";
+      const finalData = await res.json().catch(() => data || {});
+      feedback.textContent =
+        finalData.message || `Failed to save changes. (${res.status})`;
       feedback.className = "feedback error";
       return;
     }
 
     document.getElementById("editEmployeeModal").classList.remove("active");
     await fetchAndDisplayUsers();
-  } catch {
-    feedback.textContent = "Cannot reach server.";
+  } catch (error) {
+    feedback.textContent =
+      error && error.message ? error.message : "Cannot reach server.";
     feedback.className = "feedback error";
   } finally {
     setLoading(saveBtn, false);

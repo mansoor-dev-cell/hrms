@@ -15,7 +15,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <img src="images/logo.jpeg" alt="Sophia Academy"
-                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;">
+                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; margin-right: 5px;">
                 <div class="logo-text">SOPHIA-ACADEMY HR</div>
             </div>
             <nav class="sidebar-nav">
@@ -50,7 +50,7 @@
                     <div class="user-profile" style="cursor: pointer;">
                         <div class="avatar">AD</div>
                         <div class="user-info" style="display: flex; flex-direction: column;">
-                            <span class="name">Admin User</span>
+                            <span class="name">User</span>
                             <span class="dept">Sophia Academy - Teaching Staff</span>
                         </div>
                     </div>
@@ -74,7 +74,7 @@
                                 <i class="ph ph-magnifying-glass"
                                     style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 18px;"></i>
                                 <input type="text" id="employeeSearchInput" class="form-control"
-                                    placeholder="Search employees by name, role or email..."
+                                    placeholder="Search employees by name, department or email..."
                                     style="padding-left: 44px; margin: 0; width: 100%;">
                             </div>
                             <div style="width: 240px;">
@@ -112,7 +112,6 @@
                                     <th>Employee</th>
                                     <th>Department</th>
                                     <th>Sub-Department</th>
-                                    <th>Role</th>
                                     <th>Join Date</th>
                                     <th>Status</th>
                                     <th class="admin-only">Actions</th>
@@ -154,13 +153,6 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editEmpId">
-                <div class="form-group">
-                    <label>Role</label>
-                    <select class="form-control" id="editEmpRole">
-                        <option value="employee">Employee</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
                 <div class="form-group">
                     <label>Department</label>
                     <select class="form-control" id="editEmpDept">
