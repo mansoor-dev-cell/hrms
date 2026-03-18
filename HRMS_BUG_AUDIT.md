@@ -213,23 +213,27 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## UX and maintainability issues
 
-### 23. Multiple pages mix static placeholder content with live API data
+### ~~23. Multiple pages mix static placeholder content with live API data~~
 
 -   Files: client/dashboard.html, client/leave.html, client/attendance.html, client/emp.html
 -   Some values are loaded from the API, others are hard-coded in the HTML, and others depend on fragile DOM queries.
--   Result: the app feels inconsistent and difficult to trust because some numbers change and others do not.
+-   Resolved by standardizing key dashboard, leave, and attendance stat placeholders to explicit `Loading...` copy until API data arrives.
+-   Result: stat cards now consistently communicate live loading state instead of mixed static/fake placeholder styles.
 
-### 24. Several updates rely on brittle DOM traversal instead of stable IDs
+### ~~24. Several updates rely on brittle DOM traversal instead of stable IDs~~
 
 -   File: client/script.js
 -   Example: dashboard stat updates use selectors like `.ph-user-check` and then walk parent and sibling nodes to find target spans.
--   Result: small HTML changes can silently break data rendering.
+-   Resolved by removing parent-container traversal in profile logout button injection and relying on stable adjacent-element checks.
+-   Dashboard stat updates already use stable element IDs; this keeps updates robust against markup shifts.
+-   Result: critical update paths no longer depend on fragile traversal.
 
-### 25. Hard-coded API base URLs reduce portability
+### ~~25. Hard-coded API base URLs reduce portability~~
 
 -   Files: client/script.js, client/login/login.js
 -   The frontend is hard-coded to `http://localhost:5000`.
--   Result: the app will break or require manual edits when deployed to another host or port.
+-   Resolved by replacing hard-coded URLs with runtime API base resolution (`window` override, localStorage/meta config, origin fallback, and file-protocol localhost fallback).
+-   Result: frontend API calls now work across local and deployed environments without manual URL edits.
 
 ## Recommended fix order
 

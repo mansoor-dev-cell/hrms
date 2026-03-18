@@ -1,4 +1,48 @@
-const API_BASE = "http://localhost:5000/api/auth";
+const API_BASE = resolveAuthApiBase();
+
+function normalizeBaseUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+function resolveAuthApiBase() {
+  const fromWindow =
+    typeof window !== "undefined" &&
+    typeof window.__HRMS_API_BASE_URL === "string"
+      ? window.__HRMS_API_BASE_URL
+      : "";
+
+  let fromStorage = "";
+  try {
+    fromStorage =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("hrmsApiBaseUrl") || ""
+        : "";
+  } catch {
+    fromStorage = "";
+  }
+
+  const fromMeta =
+    typeof document !== "undefined"
+      ? document
+          .querySelector('meta[name="hrms-api-base"]')
+          ?.getAttribute("content") || ""
+      : "";
+
+  const configured = normalizeBaseUrl(fromWindow || fromStorage || fromMeta);
+  if (configured) return `${configured}/api/auth`;
+
+  if (typeof window !== "undefined" && window.location?.protocol === "file:") {
+    return "http://localhost:5000/api/auth";
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${normalizeBaseUrl(window.location.origin)}/api/auth`;
+  }
+
+  return "http://localhost:5000/api/auth";
+}
 
 // ── Element refs
 const tabSignIn = document.getElementById("tabSignIn");
@@ -125,7 +169,12 @@ document.getElementById("suPassword").addEventListener("input", (e) => {
 fpSubmit.addEventListener("click", async () => {
   clearFeedback(fpFeedback);
   const email = document.getElementById("fpEmail").value.trim();
-  if (!email) return showFeedback(fpFeedback, "error", "Please enter your email address.");
+  if (!email)
+    return showFeedback(
+      fpFeedback,
+      "error",
+      "Please enter your email address.",
+    );
 
   setLoading(fpSubmit, true);
   try {
@@ -137,7 +186,11 @@ fpSubmit.addEventListener("click", async () => {
     const data = await res.json();
 
     if (!res.ok) {
-      showFeedback(fpFeedback, "error", data.message || "Something went wrong.");
+      showFeedback(
+        fpFeedback,
+        "error",
+        data.message || "Something went wrong.",
+      );
       return;
     }
 
@@ -164,12 +217,16 @@ rpSubmit.addEventListener("click", async () => {
   clearFeedback(rpFeedback);
   const token = document.getElementById("rpCode").value.trim();
   const newPassword = document.getElementById("rpNewPass").value;
-  const confirm    = document.getElementById("rpConfirm").value;
+  const confirm = document.getElementById("rpConfirm").value;
 
   if (!token || !newPassword || !confirm)
     return showFeedback(rpFeedback, "error", "Please fill in all fields.");
   if (newPassword.length < 6)
-    return showFeedback(rpFeedback, "error", "Password must be at least 6 characters.");
+    return showFeedback(
+      rpFeedback,
+      "error",
+      "Password must be at least 6 characters.",
+    );
   if (newPassword !== confirm)
     return showFeedback(rpFeedback, "error", "Passwords do not match.");
 
@@ -187,7 +244,11 @@ rpSubmit.addEventListener("click", async () => {
       return;
     }
 
-    showFeedback(rpFeedback, "success", "Password reset! Redirecting to sign in...");
+    showFeedback(
+      rpFeedback,
+      "success",
+      "Password reset! Redirecting to sign in...",
+    );
     setTimeout(() => {
       document.getElementById("rpCode").value = "";
       document.getElementById("rpNewPass").value = "";

@@ -45,7 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Inject logout button next to each user-profile if not already present
       document.querySelectorAll(".user-profile").forEach((profileEl) => {
-        if (!profileEl.parentElement.querySelector(".logout-btn")) {
+        const nextEl = profileEl.nextElementSibling;
+        const hasAdjacentLogout =
+          !!nextEl && nextEl.classList.contains("logout-btn");
+
+        if (!hasAdjacentLogout) {
           const btn = document.createElement("button");
           btn.className = "logout-btn";
           btn.title = "Sign out";
@@ -228,7 +232,51 @@ let filteredEmployeesData = [];
 let employeeCurrentPage = 1;
 const EMPLOYEE_PAGE_SIZE = 5;
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = resolveApiBaseUrl();
+
+function normalizeBaseUrl(url) {
+  return String(url || "")
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+function resolveApiBaseUrl() {
+  const fromWindow =
+    typeof window !== "undefined" &&
+    typeof window.__HRMS_API_BASE_URL === "string"
+      ? window.__HRMS_API_BASE_URL
+      : "";
+
+  let fromStorage = "";
+  try {
+    fromStorage =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("hrmsApiBaseUrl") || ""
+        : "";
+  } catch {
+    fromStorage = "";
+  }
+
+  const fromMeta =
+    typeof document !== "undefined"
+      ? document
+          .querySelector('meta[name="hrms-api-base"]')
+          ?.getAttribute("content") || ""
+      : "";
+
+  const configured = normalizeBaseUrl(fromWindow || fromStorage || fromMeta);
+  if (configured) return configured;
+
+  if (typeof window !== "undefined" && window.location?.protocol === "file:") {
+    return "http://localhost:5000";
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return normalizeBaseUrl(window.location.origin);
+  }
+
+  return "http://localhost:5000";
+}
 
 function getAuthToken() {
   return localStorage.getItem("token") || "";
