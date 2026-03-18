@@ -567,6 +567,110 @@ app.put(
   },
 );
 
+// POST /api/salary/assign
+app.post(
+  "/api/salary/assign",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const {
+        scopeType,
+        department,
+        subDepartment,
+        userId,
+        monthlySalary,
+        annualLeaveQuota,
+        sickLeaveQuota,
+        lopQuota,
+        lopDeductionPercent,
+      } = req.body;
+
+      if (!scopeType || !["department", "subDepartment", "individual"].includes(scopeType)) {
+        return res.status(400).json({ message: "scopeType must be department, subDepartment, or individual." });
+      }
+
+      const numericFields = {
+        monthlySalary,
+        annualLeaveQuota,
+        sickLeaveQuota,
+        lopQuota,
+        lopDeductionPercent,
+      };
+
+      for (const [key, value] of Object.entries(numericFields)) {
+        if (value === undefined) continue;
+        if (!Number.isFinite(Number(value))) {
+          return res.status(400).json({ message: `${key} must be a valid number.` });
+        }
+      }
+
+      if (Number(monthlySalary) < 0) {
+        return res.status(400).json({ message: "monthlySalary cannot be negative." });
+      }
+      if (Number(annualLeaveQuota) < 0 || Number(sickLeaveQuota) < 0 || Number(lopQuota) < 0) {
+        return res.status(400).json({ message: "Leave quotas cannot be negative." });
+      }
+      if (Number(lopDeductionPercent) < 0 || Number(lopDeductionPercent) > 100) {
+        return res.status(400).json({ message: "lopDeductionPercent must be between 0 and 100." });
+      }
+
+      const patch = {
+        monthlySalary: Number(monthlySalary),
+        annualLeaveQuota: Number(annualLeaveQuota),
+        sickLeaveQuota: Number(sickLeaveQuota),
+        lopQuota: Number(lopQuota),
+        lopDeductionPercent: Number(lopDeductionPercent),
+      };
+
+      let filter = {};
+      if (scopeType === "department") {
+        if (!department || !VALID_DEPARTMENTS.includes(department)) {
+          return res.status(400).json({ message: "A valid department is required." });
+        }
+        filter = { department };
+      }
+
+      if (scopeType === "subDepartment") {
+        if (!department || !VALID_DEPARTMENTS.includes(department)) {
+          return res.status(400).json({ message: "A valid department is required for sub-department assignment." });
+        }
+
+        const validSubs = VALID_SUB_DEPARTMENTS[department] || [];
+        if (!subDepartment || !validSubs.includes(subDepartment)) {
+          return res.status(400).json({ message: "A valid sub-department is required for the selected department." });
+        }
+
+        filter = { department, subDepartment };
+      }
+
+      if (scopeType === "individual") {
+        if (!userId) {
+          return res.status(400).json({ message: "userId is required for individual assignment." });
+        }
+        filter = { _id: userId };
+      }
+
+      const result = await User.updateMany(filter, { $set: patch });
+      const matchedCount = result.matchedCount || 0;
+      const modifiedCount = result.modifiedCount || 0;
+
+      if (!matchedCount) {
+        return res.status(404).json({ message: "No users matched the selected scope." });
+      }
+
+      return res.json({
+        message: "Compensation and leave policy assigned successfully.",
+        scopeType,
+        matchedCount,
+        modifiedCount,
+      });
+    } catch (err) {
+      return res.status(500).json({ message: "Server error.", error: err.message });
+    }
+  },
+);
+
 app.listen(5000, () => {
   console.log("🚀 Server running on port 5000");
 });

@@ -114,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (page === 'emp.html') {
             fetchAndDisplayUsers();
+          setupSalaryAssignmentPanel();
         }
 
         if (page === 'attendance.html') {
@@ -2304,4 +2305,160 @@ function setLoading(btn, loading) {
     btn.disabled = false;
     if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
   }
+}
+
+function refreshSalarySubDeptOptions() {
+  const deptEl = document.getElementById("salaryDept");
+  const subDeptEl = document.getElementById("salarySubDept");
+  if (!deptEl || !subDeptEl) return;
+
+  const options = DEPARTMENT_MAP[deptEl.value] || [];
+  subDeptEl.innerHTML = options
+    .map((opt) => `<option value="${opt}">${opt}</option>`)
+    .join("");
+}
+
+function populateSalaryUserDropdown() {
+  const userSelect = document.getElementById("salaryUserId");
+  if (!userSelect) return;
+
+  const users = Array.isArray(allEmployeesData) ? allEmployeesData : [];
+  const rows = users
+    .map((u) => {
+      const userId = getRecordId(u);
+      const normalized = normalizeDeptSubDept(u.department, u.subDepartment);
+      return `<option value="${userId}">${u.name} (${u.email}) - ${normalized.department} / ${normalized.subDepartment}</option>`;
+    })
+    .join("");
+
+  userSelect.innerHTML = `<option value="">Select employee</option>${rows}`;
+}
+
+function toggleSalaryScopeFields() {
+  const scopeEl = document.getElementById("salaryScopeType");
+  const deptWrap = document.getElementById("salaryDeptWrap");
+  const subDeptWrap = document.getElementById("salarySubDeptWrap");
+  const userWrap = document.getElementById("salaryUserWrap");
+  if (!scopeEl || !deptWrap || !subDeptWrap || !userWrap) return;
+
+  const scope = scopeEl.value;
+  const showDept = scope === "department" || scope === "subDepartment";
+  const showSubDept = scope === "subDepartment";
+  const showUser = scope === "individual";
+
+  deptWrap.style.display = showDept ? "" : "none";
+  subDeptWrap.style.display = showSubDept ? "" : "none";
+  userWrap.style.display = showUser ? "" : "none";
+}
+
+async function submitSalaryAssignment() {
+  const scopeType = document.getElementById("salaryScopeType")?.value;
+  const department = document.getElementById("salaryDept")?.value;
+  const subDepartment = document.getElementById("salarySubDept")?.value;
+  const userId = document.getElementById("salaryUserId")?.value;
+
+  const monthlySalary = Number(
+    document.getElementById("salaryMonthly")?.value || 0,
+  );
+  const annualLeaveQuota = Number(
+    document.getElementById("salaryAnnualLeave")?.value || 0,
+  );
+  const sickLeaveQuota = Number(
+    document.getElementById("salarySickLeave")?.value || 0,
+  );
+  const lopQuota = Number(
+    document.getElementById("salaryLopQuota")?.value || 0,
+  );
+  const lopDeductionPercent = Number(
+    document.getElementById("salaryLopDeduction")?.value || 0,
+  );
+
+  const feedback = document.getElementById("salaryAssignFeedback");
+  const btn = document.getElementById("assignSalaryBtn");
+  if (!feedback || !btn) return;
+
+  if (scopeType === "individual" && !userId) {
+    feedback.textContent = "Please select an employee.";
+    feedback.className = "feedback error";
+    return;
+  }
+
+  if (
+    monthlySalary < 0 ||
+    annualLeaveQuota < 0 ||
+    sickLeaveQuota < 0 ||
+    lopQuota < 0 ||
+    lopDeductionPercent < 0 ||
+    lopDeductionPercent > 100
+  ) {
+    feedback.textContent =
+      "Please enter valid values. Deduction must be between 0 and 100.";
+    feedback.className = "feedback error";
+    return;
+  }
+
+  const payload = {
+    scopeType,
+    department,
+    subDepartment,
+    userId,
+    monthlySalary,
+    annualLeaveQuota,
+    sickLeaveQuota,
+    lopQuota,
+    lopDeductionPercent,
+  };
+
+  setLoading(btn, true);
+  try {
+    const res = await apiFetch("/api/salary/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      feedback.textContent =
+        data.message || `Assignment failed. (${res.status})`;
+      feedback.className = "feedback error";
+      return;
+    }
+
+    feedback.textContent = `Assignment applied to ${data.modifiedCount || 0} user(s).`;
+    feedback.className = "feedback success";
+    await fetchAndDisplayUsers();
+    populateSalaryUserDropdown();
+  } catch (err) {
+    feedback.textContent = err?.message || "Cannot reach server.";
+    feedback.className = "feedback error";
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+function setupSalaryAssignmentPanel() {
+  const scopeEl = document.getElementById("salaryScopeType");
+  const deptEl = document.getElementById("salaryDept");
+  const btn = document.getElementById("assignSalaryBtn");
+  if (!scopeEl || !deptEl || !btn) return;
+
+  if (!scopeEl.dataset.bound) {
+    scopeEl.addEventListener("change", toggleSalaryScopeFields);
+    scopeEl.dataset.bound = "true";
+  }
+
+  if (!deptEl.dataset.bound) {
+    deptEl.addEventListener("change", refreshSalarySubDeptOptions);
+    deptEl.dataset.bound = "true";
+  }
+
+  if (!btn.dataset.bound) {
+    btn.addEventListener("click", submitSalaryAssignment);
+    btn.dataset.bound = "true";
+  }
+
+  refreshSalarySubDeptOptions();
+  toggleSalaryScopeFields();
+  populateSalaryUserDropdown();
 }

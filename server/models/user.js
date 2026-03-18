@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema(
       default: "Sophia Academy",
     },
     subDepartment: { type: String, default: "Teaching Staff" },
+    monthlySalary: { type: Number, min: 0, default: 0 },
+    annualLeaveQuota: { type: Number, min: 0, default: 0 },
+    sickLeaveQuota: { type: Number, min: 0, default: 0 },
+    lopQuota: { type: Number, min: 0, default: 0 },
+    lopDeductionPercent: { type: Number, min: 0, max: 100, default: 100 },
     joinDate: { type: Date, default: Date.now },
     status: {
       type: String,
