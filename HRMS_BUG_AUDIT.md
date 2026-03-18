@@ -125,11 +125,12 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   The button state/text updates to reflect remaining records and disables when all rows are shown.
 -   Result: the control is functional and no longer misleading.
 
-### 14. Dashboard still labels a section as placeholder
+### ~~14. Dashboard still labels a section as placeholder~~
 
 -   File: client/dashboard.html
 -   There is a literal comment `Recent Activity & Chart placeholder` even though that section now shows a table.
--   Result: the codebase still reflects unfinished placeholder implementation and unclear ownership of the dashboard layout.
+-   Resolved by replacing the placeholder comment with an accurate section label.
+-   Result: dashboard markup no longer carries misleading placeholder wording.
 
 ### 15. Notification badge logic exists without matching markup
 
