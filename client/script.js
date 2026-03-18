@@ -271,6 +271,16 @@ function resolveApiBaseUrl() {
     return "http://localhost:5000";
   }
 
+  // For localhost dev servers (Live Server on 5500, etc.), route to backend on port 5000
+  if (
+    typeof window !== "undefined" &&
+    window.location?.hostname &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  ) {
+    return "http://localhost:5000";
+  }
+
   if (typeof window !== "undefined" && window.location?.origin) {
     return normalizeBaseUrl(window.location.origin);
   }
