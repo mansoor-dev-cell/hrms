@@ -244,6 +244,26 @@ function isSameUserRecord(recordUser, currentUser) {
   return !!recordEmail && recordEmail === currentEmail;
 }
 
+function toDateKey(value) {
+  const date = value instanceof Date ? new Date(value) : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().split("T")[0];
+}
+
+function getAttendanceDayCredit(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+  if (normalizedStatus === "present" || normalizedStatus === "late") return 1;
+  if (normalizedStatus === "half-day") return 0.5;
+  return 0;
+}
+
+function formatDashboardDayValue(value) {
+  if (!Number.isFinite(value)) return "0";
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1).replace(/\.0$/, "");
+}
+
 async function fetchAndDisplayUsers() {
     const tbody = document.getElementById('employeeTableBody');
     if (!tbody) return;
@@ -948,23 +968,92 @@ async function fetchEmployeeDashboardData() {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
+            const today = new Date(currentYear, currentMonth, now.getDate());
+            const monthStart = new Date(currentYear, currentMonth, 1);
+
+            const joinDate = user.joinDate ? new Date(user.joinDate) : null;
+            const hasValidJoinDate =
+              joinDate && !Number.isNaN(joinDate.getTime());
+            const activeStartDate =
+              hasValidJoinDate && joinDate > monthStart
+                ? new Date(
+                    joinDate.getFullYear(),
+                    joinDate.getMonth(),
+                    joinDate.getDate(),
+                  )
+                : monthStart;
 
       const myAttThisMonth = myAttendance.filter((a) => {
         const d = new Date(a.date);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        return (
+          d.getMonth() === currentMonth &&
+          d.getFullYear() === currentYear &&
+          d <= today
+        );
       });
 
-      const presentDays = myAttThisMonth.filter(
-        (a) => a.status === "present" || a.status === "late",
-      ).length;
+      const attendanceCreditByDate = new Map();
+      myAttThisMonth.forEach((attendance) => {
+        const dateKey = toDateKey(attendance.date);
+        if (!dateKey) return;
 
-      // Count working days so far (Mon–Sat; only Sunday is considered off by default)
-      let workingDaysSoFar = 0;
-      for (let d = 1; d <= now.getDate(); d++) {
-        if (new Date(currentYear, currentMonth, d).getDay() !== 0)
-          workingDaysSoFar++;
-      }
-      const absentDays = Math.max(0, workingDaysSoFar - presentDays);
+        const credit = getAttendanceDayCredit(attendance.status);
+        const existingCredit = attendanceCreditByDate.get(dateKey) || 0;
+        if (credit > existingCredit) {
+          attendanceCreditByDate.set(dateKey, credit);
+        }
+      });
+
+      const approvedLeaveDates = new Set();
+      myLeaves.forEach((leave) => {
+        if (leave.status !== "approved") return;
+
+        const rangeStart = new Date(leave.startDate);
+        const rangeEnd = new Date(leave.endDate);
+        if (
+          Number.isNaN(rangeStart.getTime()) ||
+          Number.isNaN(rangeEnd.getTime())
+        )
+          return;
+
+        for (
+          let date = new Date(
+            rangeStart.getFullYear(),
+            rangeStart.getMonth(),
+            rangeStart.getDate(),
+          );
+          date <= rangeEnd && date <= today;
+          date.setDate(date.getDate() + 1)
+        ) {
+          if (date < activeStartDate || date.getDay() === 0) continue;
+          approvedLeaveDates.add(toDateKey(date));
+        }
+      });
+
+            let presentDays = 0;
+            let absentDays = 0;
+            if (activeStartDate <= today) {
+              for (
+                let date = new Date(
+                  activeStartDate.getFullYear(),
+                  activeStartDate.getMonth(),
+                  activeStartDate.getDate(),
+                );
+                date <= today;
+                date.setDate(date.getDate() + 1)
+              ) {
+                if (date.getDay() === 0) continue;
+
+                const dateKey = toDateKey(date);
+                const attendanceCredit =
+                  attendanceCreditByDate.get(dateKey) || 0;
+                presentDays += attendanceCredit;
+
+                if (approvedLeaveDates.has(dateKey)) continue;
+                absentDays += Math.max(0, 1 - attendanceCredit);
+              }
+            }
+
       const approvedLeaves = myLeaves.filter(
         (l) => l.status === "approved",
       ).length;
@@ -976,8 +1065,8 @@ async function fetchEmployeeDashboardData() {
         const el = document.getElementById(id);
         if (el) el.textContent = val;
       };
-      setEl("empDaysPresent", presentDays);
-      setEl("empDaysAbsent", absentDays);
+            setEl("empDaysPresent", formatDashboardDayValue(presentDays));
+            setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
       setEl("empApprovedLeaves", approvedLeaves);
       setEl("empPendingLeaves", pendingLeaves);
 

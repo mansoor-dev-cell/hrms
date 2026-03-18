@@ -61,6 +61,7 @@ app.post("/api/auth/register", async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        joinDate: newUser.joinDate,
       },
     });
   } catch (err) {
@@ -101,6 +102,7 @@ app.post("/api/auth/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        joinDate: user.joinDate,
       },
     });
   } catch (err) {
@@ -192,7 +194,8 @@ app.get("/api/auth/me", async (req, res) => {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      joinDate: user.joinDate,
     });
   } catch (err) {
     res.status(401).json({ message: "Invalid token.", error: err.message });

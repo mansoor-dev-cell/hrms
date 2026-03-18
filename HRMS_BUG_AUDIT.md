@@ -26,16 +26,12 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Resolved by removing the duplicate overwrite and computing a single `presentTodayCount` value.
 -   The attendance card now consistently counts present, half-day, and late records the same way the page logic already intended.
 
-### 4. Employee dashboard absence count is inflated and logically incorrect
+### ~~4. Employee dashboard absence count is inflated and logically incorrect~~
 
 -   File: client/script.js
--   `absentDays` is computed as `workingDaysSoFar - presentDays`.
--   This ignores:
-    -   approved leave days
-    -   half-day attendance
-    -   employee join date
-    -   future approved leave already in the month
--   Result: employee absence numbers can be wrong even when attendance and leave records are correct.
+-   Resolved by calculating employee attendance day-by-day from the later of month start or join date.
+-   Approved leave days are excluded from absence, half-days count as `0.5`, and future dates are not counted.
+-   The auth payloads now include `joinDate` so the dashboard has the data needed for a consistent calculation.
 
 ### 5. Employee dashboard calendar does not reflect pending leave state
 
