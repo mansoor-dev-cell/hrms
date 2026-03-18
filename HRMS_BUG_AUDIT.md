@@ -14,13 +14,11 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Resolved by removing the obsolete Add Employee UI, client submission logic, and backend `POST /api/users` route.
 -   Employees are now created only through signup, which matches the current product flow.
 
-### 2. Employee leave page filtering is wrong
+### ~~2. Employee leave page filtering is wrong~~
 
 -   File: client/script.js
--   In `fetchAndDisplayLeaves()`, employee filtering still uses `loggedInUser._id` or `loggedInUser.email`.
--   The app stores the logged-in user as `{ id, name, email, role }`, not `{ _id, ... }`.
--   The leaves API populates `employeeId` with `name department role`, not `email`.
--   Result: non-admin users can end up with empty leave data even when records exist.
+-   Resolved by centralizing user-record matching and comparing `id`/`_id` consistently, with email only as a fallback.
+-   The leave page and employee dashboard now use the same identity matching logic for populated `employeeId` records.
 
 ### 3. Attendance "Present Today" count is overwritten incorrectly
 
@@ -214,7 +212,7 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 ## Recommended fix order
 
 1.  Fix the Add Employee modal markup and bind submission to the form, not inline `form.submit()`. Removed the obsolete Add Employee flow entirely.
-2.  Fix employee leave filtering to use `loggedInUser.id` and populated `_id` consistently.
+2.  ~~Fix employee leave filtering to use `loggedInUser.id` and populated `_id` consistently.~~ Centralized record matching now handles `id` and `_id` correctly.
 3.  Fix role initialization so stale cached data does not render mixed admin/employee UI.
 4.  Remove or replace all hard-coded dashboard and leave stat copy with real calculated values.
 5.  Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route.

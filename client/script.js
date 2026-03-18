@@ -220,6 +220,30 @@ document.addEventListener('DOMContentLoaded', () => {
 let allEmployeesData = []; // Store globally for client-side search
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
 
+function getRecordId(entity) {
+  if (!entity) return "";
+  if (typeof entity === "string") return entity;
+  return String(entity.id || entity._id || "");
+}
+
+function isSameUserRecord(recordUser, currentUser) {
+  if (!recordUser || !currentUser) return false;
+
+  const recordId = getRecordId(recordUser);
+  const currentId = getRecordId(currentUser);
+  if (recordId && currentId) {
+    return recordId === currentId;
+  }
+
+  const recordEmail =
+    typeof recordUser.email === "string" ? recordUser.email.toLowerCase() : "";
+  const currentEmail =
+    typeof currentUser.email === "string"
+      ? currentUser.email.toLowerCase()
+      : "";
+  return !!recordEmail && recordEmail === currentEmail;
+}
+
 async function fetchAndDisplayUsers() {
     const tbody = document.getElementById('employeeTableBody');
     if (!tbody) return;
@@ -609,10 +633,11 @@ async function fetchAndDisplayLeaves() {
         // If not admin, only show the current user's own leave requests
         const loggedInUser = JSON.parse(localStorage.getItem('user') || 'null');
         const isAdmin = loggedInUser && loggedInUser.role === 'admin';
-        allLeavesData = isAdmin ? leaves : leaves.filter(l => {
-            const emp = l.employeeId;
-            return emp && (emp._id === loggedInUser._id || emp.email === loggedInUser.email);
-        });
+        allLeavesData = isAdmin
+          ? leaves
+          : leaves.filter((leave) =>
+              isSameUserRecord(leave.employeeId, loggedInUser),
+            );
 
         // Update Stats
         let pending = 0;
@@ -911,15 +936,13 @@ async function fetchEmployeeDashboardData() {
       const allLeaves = leavesRes.ok ? await leavesRes.json() : [];
 
       // Filter for current user only
-      const myAttendance = allAttendance.filter((a) => {
-        const emp = a.employeeId;
-        return emp && (emp._id === user._id || emp.email === user.email);
-      });
+            const myAttendance = allAttendance.filter((attendance) =>
+              isSameUserRecord(attendance.employeeId, user),
+            );
 
-      const myLeaves = allLeaves.filter((l) => {
-        const emp = l.employeeId;
-        return emp && (emp._id === user._id || emp.email === user.email);
-      });
+            const myLeaves = allLeaves.filter((leave) =>
+              isSameUserRecord(leave.employeeId, user),
+            );
 
       // --- Stats ---
       const now = new Date();
