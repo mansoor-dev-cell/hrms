@@ -20,15 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // -- Update Profile DOM Method --
     function updateProfileDOM(userData) {
       const userNameEls = document.querySelectorAll(".user-info .name");
-      const userRoleEls = document.querySelectorAll(".user-info .role");
+      const userDeptEls = document.querySelectorAll(".user-info .dept");
       const userAvatarEls = document.querySelectorAll(".user-profile .avatar");
 
       userNameEls.forEach((el) => {
         el.textContent = userData.name || "User";
       });
 
-      userRoleEls.forEach((el) => {
-        el.textContent = userData.role === "admin" ? "HR Manager" : "Employee";
+      userDeptEls.forEach((el) => {
+        const dept = userData.department || "Sophia Academy";
+        const sub = userData.subDepartment || "Teaching Staff";
+        el.textContent = `${dept} - ${sub}`;
       });
 
       if (userData.name) {
@@ -479,7 +481,8 @@ function renderEmployeePage() {
         })
       : "N/A";
 
-    const department = user.department || "General";
+    const department = user.department || "Sophia Academy";
+    const subDepartment = user.subDepartment || "Teaching Staff";
     const roleStr = user.role
       ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
       : "Employee";
@@ -505,13 +508,20 @@ function renderEmployeePage() {
         </div>
       </td>
       <td style="vertical-align: middle;">${department}</td>
+      <td style="vertical-align: middle;">${subDepartment}</td>
       <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
       <td style="vertical-align: middle;" class="text-muted">${joinDate}</td>
       <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${status}</span></td>
 
     `;
+    // Actions column (admin-only)
+    const actionsCell = document.createElement("td");
+    actionsCell.style.verticalAlign = "middle";
+    actionsCell.className = "admin-only";
+    actionsCell.innerHTML = `<button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="openEditEmployeeModal('${user._id}', '${user.role || "employee"}', '${(user.department || "Sophia Academy").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${(user.subDepartment || "Teaching Staff").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${user.status || "Active"}')"><i class="ph ph-pencil"></i> Edit</button>`;
+    tr.appendChild(actionsCell);
     tbody.appendChild(tr);
-  });
+  };);
 
   const countText = document.getElementById("employeeCountText");
   if (countText) {
@@ -628,8 +638,16 @@ function setupEmployeeSearch() {
             const roleMatch = user.role && user.role.toLowerCase().includes(term);
             const textMatch = term === '' ? true : (nameMatch || emailMatch || roleMatch);
 
-            const userDept = (user.department || 'general').toLowerCase();
-            const deptMatch = dept === '' ? true : userDept.includes(dept);
+            const userDept = (
+              user.department || "Sophia Academy"
+            ).toLowerCase();
+            const userSubDept = (
+              user.subDepartment || "Teaching Staff"
+            ).toLowerCase();
+            const deptMatch =
+              dept === ""
+                ? true
+                : userDept.includes(dept) || userSubDept.includes(dept);
 
             const userStatus = (user.status || 'active').toLowerCase().replace(/\s+/g, '');
             const statusMatch = status === '' ? true : userStatus.includes(status.replace(/\s+/g, ''));
@@ -789,7 +807,7 @@ function renderAttendanceRows() {
                     </div>
                     <div>
                         <div class="fw-semibold text-main">${user.name}</div>
-                        <div class="text-muted" style="font-size: 12px;">${user.department || "General"}</div>
+                        <div class="text-muted" style="font-size: 12px;">${user.department || "Sophia Academy"} - ${user.subDepartment || "Teaching Staff"}</div>
                     </div>
                 </div>
             </td>
@@ -867,7 +885,11 @@ function setupAttendanceSearch() {
 
             const user = record.employeeId || {};
             const nameMatch = user.name && user.name.toLowerCase().includes(term);
-            const deptMatch = user.department && user.department.toLowerCase().includes(term);
+            const deptMatch =
+              (user.department &&
+                user.department.toLowerCase().includes(term)) ||
+              (user.subDepartment &&
+                user.subDepartment.toLowerCase().includes(term));
             const textMatch = term === '' ? true : (nameMatch || deptMatch);
 
             return dateMatch && textMatch;
@@ -891,7 +913,7 @@ async function populateEmployeeDropdown(dropdownId = 'attEmployee') {
         users.forEach(u => {
             const opt = document.createElement('option');
             opt.value = u._id;
-            opt.textContent = `${u.name} - ${u.department || 'General'}`;
+            opt.textContent = `${u.name} - ${u.department || "Sophia Academy"} / ${u.subDepartment || "Teaching Staff"}`;
             dropdown.appendChild(opt);
         });
     } catch (err) {
@@ -1223,7 +1245,11 @@ function setupLeaveSearch() {
         const filtered = allLeavesData.filter(record => {
             const user = record.employeeId || {};
             const nameMatch = user.name && user.name.toLowerCase().includes(term);
-            const deptMatch = user.department && user.department.toLowerCase().includes(term);
+            const deptMatch =
+              (user.department &&
+                user.department.toLowerCase().includes(term)) ||
+              (user.subDepartment &&
+                user.subDepartment.toLowerCase().includes(term));
             const textMatch = term === '' ? true : (nameMatch || deptMatch);
 
             const recordStatus = (record.status || '').toLowerCase();
@@ -1860,7 +1886,11 @@ function setupLeaveFormForRole(user) {
         const roleEl   = document.getElementById('leaveModalRole');
         const avatarEl = document.getElementById('leaveModalAvatar');
         if (nameEl)   nameEl.textContent   = user.name || 'You';
-        if (roleEl)   roleEl.textContent   = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee';
+        if (roleEl)
+          roleEl.textContent =
+            user.department && user.subDepartment
+              ? `${user.department} - ${user.subDepartment}`
+              : user.department || "Sophia Academy - Teaching Staff";
         if (avatarEl) {
             const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : 'U';
             avatarEl.textContent = initials;
@@ -2022,7 +2052,8 @@ async function fetchDashboardData() {
             top5.forEach((user, index) => {
                 const initials = user.name ? user.name.substring(0, 2).toUpperCase() : 'U';
                 const colorTheme = colors[index % colors.length];
-                const department = user.department || 'General';
+                const department = user.department || "Sophia Academy";
+                const subDepartment = user.subDepartment || "Teaching Staff";
                 const roleStr = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee';
                 const joinDate = user.joinDate || user.createdAt;
                 const dateStr = joinDate ? new Date(joinDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'N/A';
@@ -2040,7 +2071,7 @@ async function fetchDashboardData() {
                             </div>
                         </div>
                     </td>
-                    <td style="vertical-align: middle;">${department}</td>
+                    <td style="vertical-align: middle;">${department} - ${subDepartment}</td>
                     <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
                     <td style="vertical-align: middle;" class="text-muted">${dateStr}</td>
 
@@ -2052,4 +2083,95 @@ async function fetchDashboardData() {
     } catch (err) {
         console.error("Error fetching dashboard data:", err);
     }
+}
+
+// ── Edit Employee Modal ───────────────────────────────────────────────────────
+const SUB_DEPT_MAP = {
+  "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
+  "Global Online College": ["Sales Team", "Marketing Team"],
+};
+
+function openEditEmployeeModal(id, role, department, subDepartment, status) {
+  const modal = document.getElementById("editEmployeeModal");
+  if (!modal) return;
+
+  document.getElementById("editEmpId").value = id;
+  document.getElementById("editEmpRole").value = role || "employee";
+  const deptSelect = document.getElementById("editEmpDept");
+  deptSelect.value = department || "Sophia Academy";
+  refreshSubDeptOptions(deptSelect.value, subDepartment);
+  document.getElementById("editEmpStatus").value = status || "Active";
+
+  const feedback = document.getElementById("editEmpFeedback");
+  if (feedback) { feedback.textContent = ""; feedback.className = "feedback hidden"; }
+
+  modal.classList.add("active");
+}
+
+function refreshSubDeptOptions(dept, selected) {
+  const subSelect = document.getElementById("editEmpSubDept");
+  if (!subSelect) return;
+  const options = SUB_DEPT_MAP[dept] || [];
+  subSelect.innerHTML = options.map(o => `<option value="${o}"${o === selected ? " selected" : ""}>${o}</option>`).join("");
+}
+
+// Cascade sub-department when department changes inside the modal
+document.addEventListener("DOMContentLoaded", () => {
+  const deptSel = document.getElementById("editEmpDept");
+  if (deptSel) {
+    deptSel.addEventListener("change", () => refreshSubDeptOptions(deptSel.value, ""));
+  }
+
+  const saveBtn = document.getElementById("saveEditEmpBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", saveEmployeeChanges);
+  }
+});
+
+async function saveEmployeeChanges() {
+  const id = document.getElementById("editEmpId").value;
+  const role = document.getElementById("editEmpRole").value;
+  const department = document.getElementById("editEmpDept").value;
+  const subDepartment = document.getElementById("editEmpSubDept").value;
+  const status = document.getElementById("editEmpStatus").value;
+  const feedback = document.getElementById("editEmpFeedback");
+  const saveBtn = document.getElementById("saveEditEmpBtn");
+
+  if (!id) return;
+
+  setLoading(saveBtn, true);
+  try {
+    const res = await apiFetch(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role, department, subDepartment, status }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      feedback.textContent = data.message || "Failed to save changes.";
+      feedback.className = "feedback error";
+      return;
+    }
+
+    document.getElementById("editEmployeeModal").classList.remove("active");
+    await fetchAndDisplayUsers();
+  } catch {
+    feedback.textContent = "Cannot reach server.";
+    feedback.className = "feedback error";
+  } finally {
+    setLoading(saveBtn, false);
+  }
+}
+
+function setLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner"></i> Saving...';
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+  }
 }

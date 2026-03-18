@@ -135,6 +135,8 @@ app.post("/api/auth/register", async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        department: newUser.department,
+        subDepartment: newUser.subDepartment,
         joinDate: newUser.joinDate,
       },
     });
@@ -176,6 +178,8 @@ app.post("/api/auth/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        department: user.department,
+        subDepartment: user.subDepartment,
         joinDate: user.joinDate,
       },
     });
@@ -268,6 +272,7 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
     email: user.email,
     role: user.role,
     department: user.department,
+    subDepartment: user.subDepartment,
     joinDate: user.joinDate,
     status: user.status,
   });
@@ -279,6 +284,58 @@ app.get("/api/users", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
+// PATCH /api/users/:id  (admin-only: update role, department, subDepartment, status)
+const VALID_DEPARTMENTS = ["Sophia Academy", "Global Online College"];
+const VALID_SUB_DEPARTMENTS = {
+  "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
+  "Global Online College": ["Sales Team", "Marketing Team"],
+};
+
+app.patch("/api/users/:id", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { role, department, subDepartment, status } = req.body;
+    const allowed = {};
+
+    if (role !== undefined) {
+      if (!["admin", "employee"].includes(role))
+        return res.status(400).json({ message: "Role must be admin or employee." });
+      allowed.role = role;
+    }
+
+    if (department !== undefined) {
+      if (!VALID_DEPARTMENTS.includes(department))
+        return res.status(400).json({ message: "Invalid department." });
+      allowed.department = department;
+    }
+
+    if (subDepartment !== undefined) {
+      const parent = allowed.department || department;
+      const validSubs = parent ? VALID_SUB_DEPARTMENTS[parent] : null;
+      if (validSubs && !validSubs.includes(subDepartment))
+        return res.status(400).json({ message: "Invalid sub-department for the selected department." });
+      allowed.subDepartment = subDepartment;
+    }
+
+    if (status !== undefined) {
+      if (!["Active", "On Leave", "Onboarding", "Inactive"].includes(status))
+        return res.status(400).json({ message: "Invalid status." });
+      allowed.status = status;
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: allowed },
+      { new: true },
+    ).select("-password");
+
+    if (!updated) return res.status(404).json({ message: "User not found." });
+
+    res.json({ message: "Employee updated.", user: updated });
   } catch (err) {
     res.status(500).json({ message: "Server error.", error: err.message });
   }

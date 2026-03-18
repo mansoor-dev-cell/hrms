@@ -13,10 +13,15 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["admin", "employee", "hr", "manager"],
+      enum: ["admin", "employee"],
       default: "employee",
     },
-    department: { type: String, default: "General" },
+    department: {
+      type: String,
+      enum: ["Sophia Academy", "Global Online College"],
+      default: "Sophia Academy",
+    },
+    subDepartment: { type: String, default: "Teaching Staff" },
     joinDate: { type: Date, default: Date.now },
     status: {
       type: String,

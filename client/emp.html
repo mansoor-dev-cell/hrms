@@ -51,7 +51,7 @@
                         <div class="avatar">AD</div>
                         <div class="user-info" style="display: flex; flex-direction: column;">
                             <span class="name">Admin User</span>
-                            <span class="role">HR Manager</span>
+                            <span class="dept">Sophia Academy - Teaching Staff</span>
                         </div>
                     </div>
                 </div>
@@ -77,12 +77,19 @@
                                     placeholder="Search employees by name, role or email..."
                                     style="padding-left: 44px; margin: 0; width: 100%;">
                             </div>
-                            <div style="width: 200px;">
+                            <div style="width: 240px;">
                                 <select class="form-control" style="margin: 0;" id="empDeptFilter">
                                     <option value="">All Departments</option>
-                                    <option value="engineering">Engineering</option>
-                                    <option value="design">Design</option>
-                                    <option value="hr">Human Resources</option>
+                                    <optgroup label="Sophia Academy">
+                                        <option value="sophia academy">Sophia Academy (All)</option>
+                                        <option value="teaching staff">Teaching Staff</option>
+                                        <option value="non-teaching staff">Non-Teaching Staff</option>
+                                    </optgroup>
+                                    <optgroup label="Global Online College">
+                                        <option value="global online college">Global Online College (All)</option>
+                                        <option value="sales team">Sales Team</option>
+                                        <option value="marketing team">Marketing Team</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div style="width: 200px;">
@@ -104,9 +111,11 @@
                                 <tr>
                                     <th>Employee</th>
                                     <th>Department</th>
+                                    <th>Sub-Department</th>
                                     <th>Role</th>
                                     <th>Join Date</th>
                                     <th>Status</th>
+                                    <th class="admin-only">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="employeeTableBody">
@@ -135,6 +144,55 @@
     </div>
 
     <script src="script.js"></script>
+
+    <!-- Edit Employee Modal -->
+    <div class="modal-overlay" id="editEmployeeModal">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Employee</h3>
+                <button class="modal-close" data-close-modal="editEmployeeModal"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editEmpId">
+                <div class="form-group">
+                    <label>Role</label>
+                    <select class="form-control" id="editEmpRole">
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select class="form-control" id="editEmpDept">
+                        <option value="Sophia Academy">Sophia Academy</option>
+                        <option value="Global Online College">Global Online College</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sub-Department</label>
+                    <select class="form-control" id="editEmpSubDept">
+                        <option value="Teaching Staff">Teaching Staff</option>
+                        <option value="Non-Teaching Staff">Non-Teaching Staff</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-control" id="editEmpStatus">
+                        <option value="Active">Active</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Onboarding">Onboarding</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div id="editEmpFeedback" class="feedback hidden"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" data-close-modal="editEmployeeModal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveEditEmpBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
