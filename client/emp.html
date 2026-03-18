@@ -125,17 +125,12 @@
                     <!-- Pagination -->
                     <div
                         style="padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                        <span class="text-muted" style="font-size: 13px;">Showing 1 to 5 of 124 entries</span>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;"
+                        <span id="employeeCountText" class="text-muted" style="font-size: 13px;">Showing 0 to 0 of 0 entries</span>
+                        <div id="employeePaginationControls" style="display: flex; gap: 8px; align-items: center;">
+                            <button id="employeePrevPageBtn" type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;"
                                 disabled>Previous</button>
-                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">1</button>
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">2</button>
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">3</button>
-                            <span
-                                style="display: flex; align-items: center; padding: 0 4px; color: var(--text-muted);">...</span>
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">25</button>
-                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">Next</button>
+                            <div id="employeePageNumberWrap" style="display: flex; gap: 8px; align-items: center;"></div>
+                            <button id="employeeNextPageBtn" type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;" disabled>Next</button>
                         </div>
                     </div>
                 </div>

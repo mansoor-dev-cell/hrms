@@ -224,6 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let allEmployeesData = []; // Store globally for client-side search
+let filteredEmployeesData = [];
+let employeeCurrentPage = 1;
+const EMPLOYEE_PAGE_SIZE = 5;
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
 const API_BASE_URL = "http://localhost:5000";
 
@@ -334,6 +337,7 @@ async function fetchAndDisplayUsers() {
         const users = await response.json();
         allEmployeesData = users; // Cache for the search bar
 
+        employeeCurrentPage = 1;
         renderUsersTable(allEmployeesData);
         setupEmployeeSearch(); // Initialize search listener *after* data is loaded
     } catch (error) {
@@ -343,71 +347,183 @@ async function fetchAndDisplayUsers() {
 }
 
 function renderUsersTable(usersToRender) {
-    const tbody = document.getElementById('employeeTableBody');
-    if (!tbody) return;
+  const tbody = document.getElementById("employeeTableBody");
+  if (!tbody) return;
 
-    tbody.innerHTML = '';
+  filteredEmployeesData = Array.isArray(usersToRender) ? usersToRender : [];
 
-    if (usersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">No employees found.</td></tr>';
-        const countText = document.getElementById('employeeCountText');
-        if (countText) countText.textContent = `Showing 0 to 0 entries`;
-        return;
-    }
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEmployeesData.length / EMPLOYEE_PAGE_SIZE),
+  );
+  if (employeeCurrentPage > totalPages) {
+    employeeCurrentPage = totalPages;
+  }
+  if (employeeCurrentPage < 1) {
+    employeeCurrentPage = 1;
+  }
 
-    const colors = [
-        { bg: 'rgba(79, 70, 229, 0.1)', text: 'var(--primary)' },
-        { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--success)' },
-        { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
-        { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' }
-    ];
-
-    usersToRender.forEach((user, index) => {
-        const initials = user.name ? user.name.substring(0, 2).toUpperCase() : 'U';
-        const colorTheme = colors[index % colors.length];
-
-        // Format Join Date from backend joinDate or fallback to createdAt
-        const rawDate = user.joinDate || user.createdAt;
-        const joinDate = rawDate ? new Date(rawDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' }) : 'N/A';
-
-        // Render actual department and role directly from db
-        const department = user.department || 'General';
-        const roleStr = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee';
-
-        // Render action status badge correctly
-        const status = user.status || 'Active';
-        let badgeClass = 'success';
-        if (status.toLowerCase().includes('leave')) badgeClass = 'warning';
-        else if (status.toLowerCase().includes('onboarding')) badgeClass = 'primary';
-        else if (status.toLowerCase().includes('inactive')) badgeClass = 'danger';
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>
-                <div class="d-flex align-center gap-3">
-                    <div class="avatar" style="width: 40px; height: 40px; font-size: 14px; background-color: ${colorTheme.bg}; color: ${colorTheme.text};">
-                        ${initials}
-                    </div>
-                    <div>
-                        <div class="fw-semibold text-main">${user.name}</div>
-                        <div class="text-muted" style="font-size: 13px;">${user.email}</div>
-                    </div>
-                </div>
-            </td>
-            <td style="vertical-align: middle;">${department}</td>
-            <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
-            <td style="vertical-align: middle;" class="text-muted">${joinDate}</td>
-            <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${status}</span></td>
-
-        `;
-        tbody.appendChild(tr);
-    });
-
-    const countText = document.getElementById('employeeCountText');
-    if (countText) {
-        countText.textContent = `Showing 1 to ${usersToRender.length} of ${allEmployeesData.length} entries`;
-    }
+  renderEmployeePage();
+  renderEmployeePagination();
 } // End renderUsersTable
+
+function renderEmployeePage() {
+  const tbody = document.getElementById("employeeTableBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  if (!filteredEmployeesData.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="5" style="text-align: center; padding: 20px;" class="text-muted">No employees found.</td></tr>';
+    const countText = document.getElementById("employeeCountText");
+    if (countText) countText.textContent = "Showing 0 to 0 of 0 entries";
+    return;
+  }
+
+  const startIndex = (employeeCurrentPage - 1) * EMPLOYEE_PAGE_SIZE;
+  const endIndex = startIndex + EMPLOYEE_PAGE_SIZE;
+  const pageRows = filteredEmployeesData.slice(startIndex, endIndex);
+
+  const colors = [
+    { bg: "rgba(79, 70, 229, 0.1)", text: "var(--primary)" },
+    { bg: "rgba(16, 185, 129, 0.1)", text: "var(--success)" },
+    { bg: "rgba(245, 158, 11, 0.1)", text: "var(--warning)" },
+    { bg: "rgba(239, 68, 68, 0.1)", text: "var(--danger)" },
+  ];
+
+  pageRows.forEach((user, index) => {
+    const initials = user.name ? user.name.substring(0, 2).toUpperCase() : "U";
+    const colorTheme = colors[(startIndex + index) % colors.length];
+
+    const rawDate = user.joinDate || user.createdAt;
+    const joinDate = rawDate
+      ? new Date(rawDate).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+        })
+      : "N/A";
+
+    const department = user.department || "General";
+    const roleStr = user.role
+      ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+      : "Employee";
+
+    const status = user.status || "Active";
+    let badgeClass = "success";
+    if (status.toLowerCase().includes("leave")) badgeClass = "warning";
+    else if (status.toLowerCase().includes("onboarding"))
+      badgeClass = "primary";
+    else if (status.toLowerCase().includes("inactive")) badgeClass = "danger";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div class="d-flex align-center gap-3">
+          <div class="avatar" style="width: 40px; height: 40px; font-size: 14px; background-color: ${colorTheme.bg}; color: ${colorTheme.text};">
+            ${initials}
+          </div>
+          <div>
+            <div class="fw-semibold text-main">${user.name}</div>
+            <div class="text-muted" style="font-size: 13px;">${user.email}</div>
+          </div>
+        </div>
+      </td>
+      <td style="vertical-align: middle;">${department}</td>
+      <td style="vertical-align: middle;" class="text-main">${roleStr}</td>
+      <td style="vertical-align: middle;" class="text-muted">${joinDate}</td>
+      <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${status}</span></td>
+
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const countText = document.getElementById("employeeCountText");
+  if (countText) {
+    const from = startIndex + 1;
+    const to = startIndex + pageRows.length;
+    countText.textContent = `Showing ${from} to ${to} of ${filteredEmployeesData.length} entries`;
+  }
+}
+
+function renderEmployeePagination() {
+  const prevBtn = document.getElementById("employeePrevPageBtn");
+  const nextBtn = document.getElementById("employeeNextPageBtn");
+  const pageWrap = document.getElementById("employeePageNumberWrap");
+  if (!prevBtn || !nextBtn || !pageWrap) return;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEmployeesData.length / EMPLOYEE_PAGE_SIZE),
+  );
+
+  prevBtn.disabled =
+    employeeCurrentPage <= 1 || filteredEmployeesData.length === 0;
+  nextBtn.disabled =
+    employeeCurrentPage >= totalPages || filteredEmployeesData.length === 0;
+
+  if (!prevBtn.dataset.pageBound) {
+    prevBtn.addEventListener("click", () => {
+      if (employeeCurrentPage <= 1) return;
+      employeeCurrentPage -= 1;
+      renderEmployeePage();
+      renderEmployeePagination();
+    });
+    prevBtn.dataset.pageBound = "true";
+  }
+
+  if (!nextBtn.dataset.pageBound) {
+    nextBtn.addEventListener("click", () => {
+      if (employeeCurrentPage >= totalPages) return;
+      employeeCurrentPage += 1;
+      renderEmployeePage();
+      renderEmployeePagination();
+    });
+    nextBtn.dataset.pageBound = "true";
+  }
+
+  pageWrap.innerHTML = "";
+  if (!filteredEmployeesData.length) return;
+
+  const createPageButton = (pageNumber) => {
+    const btn = document.createElement("button");
+    const isActive = pageNumber === employeeCurrentPage;
+    btn.type = "button";
+    btn.className = isActive ? "btn btn-primary" : "btn btn-outline";
+    btn.style.cssText = "padding: 6px 12px; font-size: 13px;";
+    btn.textContent = String(pageNumber);
+    btn.addEventListener("click", () => {
+      if (employeeCurrentPage === pageNumber) return;
+      employeeCurrentPage = pageNumber;
+      renderEmployeePage();
+      renderEmployeePagination();
+    });
+    pageWrap.appendChild(btn);
+  };
+
+  const pageSet = new Set([
+    1,
+    totalPages,
+    employeeCurrentPage - 1,
+    employeeCurrentPage,
+    employeeCurrentPage + 1,
+  ]);
+  const pagesToRender = [...pageSet]
+    .filter((pageNum) => pageNum >= 1 && pageNum <= totalPages)
+    .sort((a, b) => a - b);
+
+  pagesToRender.forEach((pageNum, index) => {
+    if (index > 0 && pageNum - pagesToRender[index - 1] > 1) {
+      const spacer = document.createElement("span");
+      spacer.style.cssText =
+        "display:flex;align-items:center;padding:0 4px;color:var(--text-muted);";
+      spacer.textContent = "...";
+      pageWrap.appendChild(spacer);
+    }
+    createPageButton(pageNum);
+  });
+}
 
 function setupEmployeeSearch() {
     const searchInput = document.getElementById('employeeSearchInput');
@@ -418,8 +534,11 @@ function setupEmployeeSearch() {
 
     elements.forEach(el => {
         if (!el) return;
-        el.addEventListener('input', runEmployeeFilter);
-        el.addEventListener('change', runEmployeeFilter);
+      if (!el.dataset.employeeFilterBound) {
+        el.addEventListener("input", runEmployeeFilter);
+        el.addEventListener("change", runEmployeeFilter);
+        el.dataset.employeeFilterBound = "true";
+      }
     });
 
     function runEmployeeFilter() {
@@ -444,6 +563,7 @@ function setupEmployeeSearch() {
             return textMatch && deptMatch && statusMatch;
         });
 
+        employeeCurrentPage = 1;
         renderUsersTable(filtered);
     }
 }

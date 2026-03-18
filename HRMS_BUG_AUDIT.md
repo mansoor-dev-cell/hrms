@@ -106,12 +106,15 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   The review control now applies the pending filter and scrolls to the leave table, so it performs a concrete action.
 -   Result: leave filter/review controls are functional and no longer dead placeholders.
 
-### 12. Pagination controls are dummy on the employee page
+### ~~12. Pagination controls are dummy on the employee page~~
 
 -   File: client/emp.html
+-   File: client/script.js
 -   Buttons like `Previous`, numbered pages, and `Next` are static UI only.
--   No pagination logic exists in the script for that page.
--   Result: the page looks paginated but is not.
+-   Resolved by wiring pagination controls to real client-side paging state.
+-   Employee directory now renders paged rows, previous/next navigation, dynamic page numbers, and accurate entry count text.
+-   Search/filter actions reset to page 1 and paginate the filtered dataset.
+-   Result: employee pagination controls now behave as functional navigation, not static UI.
 
 ### 13. "Load More Records" on attendance page is dummy
 
