@@ -237,10 +237,10 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## Recommended fix order
 
-1.  Fix the Add Employee modal markup and bind submission to the form, not inline `form.submit()`. Removed the obsolete Add Employee flow entirely.
+1.  ~~Fix the Add Employee modal markup and bind submission to the form, not inline `form.submit()`.~~ Removed the obsolete Add Employee flow entirely.
 2.  ~~Fix employee leave filtering to use `loggedInUser.id` and populated `_id` consistently.~~ Centralized record matching now handles `id` and `_id` correctly.
-3.  Fix role initialization so stale cached data does not render mixed admin/employee UI.
-4.  Remove or replace all hard-coded dashboard and leave stat copy with real calculated values.
-5.  Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route.
-6.  Standardize all date handling on raw `YYYY-MM-DD` strings without timezone conversion.
-7.  Replace or remove all dummy buttons, fake pagination, and dead links.
+3.  ~~Fix role initialization so stale cached data does not render mixed admin/employee UI.~~ Protected pages now wait for verified role before rendering role-specific sections.
+4.  ~~Remove or replace all hard-coded dashboard and leave stat copy with real calculated values.~~ Dashboard and leave stat copy is now driven by live data/loading states.
+5.  Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route. (Pending)
+6.  ~~Standardize all date handling on raw `YYYY-MM-DD` strings without timezone conversion.~~ Date-key normalization is centralized via `toDateKey()` and `getTodayDateKey()`.
+7.  ~~Replace or remove all dummy buttons, fake pagination, and dead links.~~ Leave filters/review, employee pagination, and attendance load-more are now functional.
