@@ -33,14 +33,13 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Approved leave days are excluded from absence, half-days count as `0.5`, and future dates are not counted.
 -   The auth payloads now include `joinDate` so the dashboard has the data needed for a consistent calculation.
 
-### 5. Employee dashboard calendar does not reflect pending leave state
+### ~~5. Employee dashboard calendar does not reflect pending leave state~~
 
 -   File: client/script.js
 -   File: client/dashboard.html
--   The calendar overlay only maps approved leaves to `leave`.
--   Pending requests are counted in stats but not reflected visually on the calendar.
--   The legend also does not currently distinguish approved vs pending leave.
--   Result: leave state is inconsistent between the leave page, leave stats, and attendance calendar.
+-   Resolved by overlaying both approved and pending leave ranges on the employee calendar.
+-   Pending leave now has its own visual state and legend entry, and those days are not selectable for a second leave request.
+-   The employee dashboard stats and calendar now represent the same leave states.
 
 ## Role and access inconsistencies
 

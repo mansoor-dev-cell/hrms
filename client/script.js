@@ -956,32 +956,31 @@ async function fetchEmployeeDashboardData() {
       const allLeaves = leavesRes.ok ? await leavesRes.json() : [];
 
       // Filter for current user only
-            const myAttendance = allAttendance.filter((attendance) =>
-              isSameUserRecord(attendance.employeeId, user),
-            );
+      const myAttendance = allAttendance.filter((attendance) =>
+        isSameUserRecord(attendance.employeeId, user),
+      );
 
-            const myLeaves = allLeaves.filter((leave) =>
-              isSameUserRecord(leave.employeeId, user),
-            );
+      const myLeaves = allLeaves.filter((leave) =>
+        isSameUserRecord(leave.employeeId, user),
+      );
 
       // --- Stats ---
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-            const today = new Date(currentYear, currentMonth, now.getDate());
-            const monthStart = new Date(currentYear, currentMonth, 1);
+      const today = new Date(currentYear, currentMonth, now.getDate());
+      const monthStart = new Date(currentYear, currentMonth, 1);
 
-            const joinDate = user.joinDate ? new Date(user.joinDate) : null;
-            const hasValidJoinDate =
-              joinDate && !Number.isNaN(joinDate.getTime());
-            const activeStartDate =
-              hasValidJoinDate && joinDate > monthStart
-                ? new Date(
-                    joinDate.getFullYear(),
-                    joinDate.getMonth(),
-                    joinDate.getDate(),
-                  )
-                : monthStart;
+      const joinDate = user.joinDate ? new Date(user.joinDate) : null;
+      const hasValidJoinDate = joinDate && !Number.isNaN(joinDate.getTime());
+      const activeStartDate =
+        hasValidJoinDate && joinDate > monthStart
+          ? new Date(
+              joinDate.getFullYear(),
+              joinDate.getMonth(),
+              joinDate.getDate(),
+            )
+          : monthStart;
 
       const myAttThisMonth = myAttendance.filter((a) => {
         const d = new Date(a.date);
@@ -1030,29 +1029,28 @@ async function fetchEmployeeDashboardData() {
         }
       });
 
-            let presentDays = 0;
-            let absentDays = 0;
-            if (activeStartDate <= today) {
-              for (
-                let date = new Date(
-                  activeStartDate.getFullYear(),
-                  activeStartDate.getMonth(),
-                  activeStartDate.getDate(),
-                );
-                date <= today;
-                date.setDate(date.getDate() + 1)
-              ) {
-                if (date.getDay() === 0) continue;
+      let presentDays = 0;
+      let absentDays = 0;
+      if (activeStartDate <= today) {
+        for (
+          let date = new Date(
+            activeStartDate.getFullYear(),
+            activeStartDate.getMonth(),
+            activeStartDate.getDate(),
+          );
+          date <= today;
+          date.setDate(date.getDate() + 1)
+        ) {
+          if (date.getDay() === 0) continue;
 
-                const dateKey = toDateKey(date);
-                const attendanceCredit =
-                  attendanceCreditByDate.get(dateKey) || 0;
-                presentDays += attendanceCredit;
+          const dateKey = toDateKey(date);
+          const attendanceCredit = attendanceCreditByDate.get(dateKey) || 0;
+          presentDays += attendanceCredit;
 
-                if (approvedLeaveDates.has(dateKey)) continue;
-                absentDays += Math.max(0, 1 - attendanceCredit);
-              }
-            }
+          if (approvedLeaveDates.has(dateKey)) continue;
+          absentDays += Math.max(0, 1 - attendanceCredit);
+        }
+      }
 
       const approvedLeaves = myLeaves.filter(
         (l) => l.status === "approved",
@@ -1065,8 +1063,8 @@ async function fetchEmployeeDashboardData() {
         const el = document.getElementById(id);
         if (el) el.textContent = val;
       };
-            setEl("empDaysPresent", formatDashboardDayValue(presentDays));
-            setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
+      setEl("empDaysPresent", formatDashboardDayValue(presentDays));
+      setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
       setEl("empApprovedLeaves", approvedLeaves);
       setEl("empPendingLeaves", pendingLeaves);
 
@@ -1075,15 +1073,20 @@ async function fetchEmployeeDashboardData() {
       myAttendance.forEach((a) => {
         attendanceMap[new Date(a.date).toISOString().split("T")[0]] = a.status;
       });
-      // Overlay approved leave ranges
+      // Overlay leave ranges so the calendar reflects approval state.
       myLeaves.forEach((l) => {
-        if (l.status !== "approved") return;
+        if (l.status !== "approved" && l.status !== "pending") return;
         for (
           let d = new Date(l.startDate);
           d <= new Date(l.endDate);
           d.setDate(d.getDate() + 1)
         ) {
-          attendanceMap[d.toISOString().split("T")[0]] = "leave";
+          const dateKey = d.toISOString().split("T")[0];
+          if (l.status === "approved") {
+            attendanceMap[dateKey] = "leave-approved";
+          } else if (!attendanceMap[dateKey]) {
+            attendanceMap[dateKey] = "leave-pending";
+          }
         }
       });
 
@@ -1154,10 +1157,15 @@ async function fetchEmployeeDashboardData() {
             color = "#fff";
             cursor = "pointer";
             title = "Selected — click to deselect";
-          } else if (status === "leave") {
+          } else if (status === "leave-approved") {
             bg = "var(--warning)";
             color = "#fff";
             title = "Approved Leave";
+          } else if (status === "leave-pending") {
+            bg = "rgba(245, 158, 11, 0.18)";
+            color = "var(--warning)";
+            border = "1.5px dashed var(--warning)";
+            title = "Pending Leave Request";
           } else if (status === "present") {
             bg = "var(--success)";
             color = "#fff";
@@ -1231,7 +1239,8 @@ async function fetchEmployeeDashboardData() {
               }
               // Cannot select already marked days
               if (
-                status === "leave" ||
+                status === "leave-approved" ||
+                status === "leave-pending" ||
                 status === "present" ||
                 status === "late" ||
                 status === "absent"
