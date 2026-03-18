@@ -210,44 +210,6 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// POST /api/users (Add Employee from UI)
-app.post("/api/users", async (req, res) => {
-  try {
-    const { firstName, lastName, email, department, role, joinDate } = req.body;
-
-    if (!firstName || !lastName || !email) {
-      return res.status(400).json({ message: "Name and email are required." });
-    }
-
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(409).json({ message: "User with this email already exists." });
-    }
-
-    const name = `${firstName} ${lastName}`.trim();
-    // Default password for new employees until they set their own
-    const hashed = await bcrypt.hash("Pass123!", 12);
-
-    const newUser = await User.create({
-      name,
-      email,
-      password: hashed,
-      department: department || "General",
-      role: role || "employee",
-      joinDate: joinDate || new Date(),
-      status: "Active"
-    });
-
-    // Don't send back password hash
-    const userToReturn = { ...newUser._doc };
-    delete userToReturn.password;
-
-    res.status(201).json({ message: "Employee added successfully", user: userToReturn });
-  } catch (err) {
-    res.status(500).json({ message: "Server error.", error: err.message });
-  }
-});
-
 // ── Attendance ─────────────────────────────────────────────
 // GET /api/attendance
 app.get("/api/attendance", async (req, res) => {

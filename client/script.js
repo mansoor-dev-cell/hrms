@@ -95,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (page === 'emp.html') {
             fetchAndDisplayUsers();
-            const saveEmpBtn = document.getElementById('saveEmployeeBtn');
-            if (saveEmpBtn) saveEmpBtn.addEventListener('click', submitEmployeeForm);
         }
 
         if (page === 'attendance.html') {
@@ -309,65 +307,6 @@ function renderUsersTable(usersToRender) {
         countText.textContent = `Showing 1 to ${usersToRender.length} of ${allEmployeesData.length} entries`;
     }
 } // End renderUsersTable
-
-async function submitEmployeeForm(e) {
-    e.preventDefault();
-    const saveBtn = document.getElementById('saveEmployeeBtn');
-    const feedback = document.getElementById('addEmpFeedback');
-
-    const firstName = document.getElementById('addEmpFirstName').value;
-    const lastName = document.getElementById('addEmpLastName').value;
-    const email = document.getElementById('addEmpEmail').value;
-    const department = document.getElementById('addEmpDept').value;
-    const role = document.getElementById('addEmpRole').value;
-    const joinDate = document.getElementById('addEmpDate').value;
-
-    if (!firstName || !lastName || !email) {
-        if (feedback) {
-            feedback.style.color = 'var(--danger)';
-            feedback.textContent = 'Name and Email are required.';
-        }
-        return;
-    }
-
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    try {
-        const payload = { firstName, lastName, email, department, role, joinDate };
-        const response = await fetch('http://localhost:5000/api/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Failed to save');
-
-        if (feedback) {
-            feedback.style.color = 'var(--success)';
-            feedback.textContent = 'Employee added successfully!';
-        }
-
-        setTimeout(() => {
-            document.getElementById('addEmployeeModal').classList.remove('active');
-            if (feedback) feedback.textContent = '';
-            document.getElementById('employeeForm').reset();
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Save Employee';
-            fetchAndDisplayUsers();
-        }, 1000);
-
-    } catch (err) {
-        console.error(err);
-        if (feedback) {
-            feedback.style.color = 'var(--danger)';
-            feedback.textContent = err.message;
-        }
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Employee';
-    }
-}
 
 function setupEmployeeSearch() {
     const searchInput = document.getElementById('employeeSearchInput');

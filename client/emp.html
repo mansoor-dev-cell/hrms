@@ -66,12 +66,8 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Employee Directory</h1>
-                        <p class="page-subtitle">Manage all your team members across departments.</p>
+                        <p class="page-subtitle">Browse employees created through the signup flow.</p>
                     </div>
-                    <button class="btn btn-primary admin-only" data-open-modal="addEmployeeModal">
-                        <i class="ph ph-plus"></i>
-                        Add Employee
-                    </button>
                 </div>
 
                 <!-- Filters & Search -->
@@ -144,62 +140,6 @@
                     </div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <!-- Add Employee Modal -->
-    <div class="modal-overlay" id="addEmployeeModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">Add New Employee</h2>
-                <button class="modal-close"><i class="ph ph-x"></i></button>
-            </div>
-            <div class="modal-body">
-                <form id="employeeForm">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label">First Name</label>
-                            <input type="text" class="form-control" placeholder="Enter first name" required>
-                        </div>
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Last Name</label>
-                            <input type="text" class="form-control" placeholder="Enter last name" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-control" placeholder="employee@company.com" required>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Department</label>
-                            <select class="form-control" required style="width: 100%;">
-                                <option value="" disabled selected>Select Dept</option>
-                                <option value="eng">Engineering</option>
-                                <option value="design">Design</option>
-                                <option value="hr">HR</option>
-                                <option value="sales">Sales</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Role/Designation</label>
-                            <input type="text" class="form-control" placeholder="e.g. Developer">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Join Date</label>
-                        <input type="date" class="form-control" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" data-close-modal>Cancel</button>
-                <button class="btn btn-primary" onclick="document.getElementById('employeeForm').submit()">Save
-                    Employee</button>
-            </div>
         </div>
     </div>
 
