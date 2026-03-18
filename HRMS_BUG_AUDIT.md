@@ -83,14 +83,17 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Pending approvals, attendance presence rate, and month-over-month employee change now render from fetched records.
 -   Result: the admin dashboard cards no longer show hard-coded fake values.
 
-### 10. Leave page stats include fake supporting text
+### ~~10. Leave page stats include fake supporting text~~
 
 -   File: client/leave.html
+-   File: client/script.js
 -   The leave stats section includes hard-coded text such as:
     -   `2 Annual, 4 Sick Leaves`
     -   `+15% from last month`
--   These values are not calculated in the current script.
--   Result: the page looks data-driven but contains dummy numbers.
+-   Resolved by replacing both helper lines with dynamic placeholders and populating them from live leave data.
+-   On Leave Today now shows a computed leave-type breakdown from approved leaves active today.
+-   Approved This Month now shows a computed month-over-month trend using current vs previous month approvals.
+-   Result: leave stat supporting text is data-driven and no longer fake.
 
 ### 11. Review links and filter links are placeholders
 

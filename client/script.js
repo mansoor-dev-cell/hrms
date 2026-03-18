@@ -713,10 +713,15 @@ async function fetchAndDisplayLeaves() {
         let pending = 0;
         let approvedThisMonth = 0;
         let onLeaveToday = 0;
+        let approvedPreviousMonth = 0;
+        const onLeaveTodayByType = {};
 
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
+        const previousMonthDate = new Date(currentYear, currentMonth - 1, 1);
+        const previousMonth = previousMonthDate.getMonth();
+        const previousMonthYear = previousMonthDate.getFullYear();
 
         // Strip out time matching for "today"
         const todayStr = now.toISOString().split('T')[0];
@@ -731,8 +736,17 @@ async function fetchAndDisplayLeaves() {
             ) {
               approvedThisMonth++;
             }
+            if (
+              sDate.getMonth() === previousMonth &&
+              sDate.getFullYear() === previousMonthYear
+            ) {
+              approvedPreviousMonth++;
+            }
             if (todayStr >= l.startDate && todayStr <= l.endDate) {
               onLeaveToday++;
+              const leaveType = String(l.type || "other").toLowerCase();
+              onLeaveTodayByType[leaveType] =
+                (onLeaveTodayByType[leaveType] || 0) + 1;
             }
           }
         });
@@ -744,6 +758,53 @@ async function fetchAndDisplayLeaves() {
         if (pendingEl) pendingEl.textContent = pending;
         if (todayEl) todayEl.textContent = onLeaveToday;
         if (approvedEl) approvedEl.textContent = approvedThisMonth;
+
+        const todaySupportEl = document.getElementById(
+          "onLeaveTodaySupportingText",
+        );
+        if (todaySupportEl) {
+          const typeLabels = {
+            annual: "Annual",
+            sick: "Sick",
+            unpaid: "Unpaid",
+            maternity: "Maternity/Paternity",
+            other: "Other",
+          };
+          const sortedTypes = Object.entries(onLeaveTodayByType).sort(
+            (a, b) => b[1] - a[1],
+          );
+
+          if (!sortedTypes.length) {
+            todaySupportEl.textContent = "No approved leaves active today";
+          } else {
+            todaySupportEl.textContent = sortedTypes
+              .map(
+                ([type, count]) => `${typeLabels[type] || "Other"}: ${count}`,
+              )
+              .join(", ");
+          }
+        }
+
+        const approvedSupportEl = document.getElementById(
+          "approvedThisMonthSupportingText",
+        );
+        if (approvedSupportEl) {
+          if (approvedPreviousMonth === 0) {
+            if (approvedThisMonth === 0) {
+              approvedSupportEl.textContent =
+                "No approvals this month or last month";
+            } else {
+              approvedSupportEl.textContent = `${approvedThisMonth} approved this month (last month: 0)`;
+            }
+          } else {
+            const diff = approvedThisMonth - approvedPreviousMonth;
+            const percent = Math.round(
+              (Math.abs(diff) / approvedPreviousMonth) * 100,
+            );
+            const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
+            approvedSupportEl.textContent = `${sign}${percent}% from last month (${approvedPreviousMonth})`;
+          }
+        }
 
         // Update Notification Bell Globally
         updateNotificationBell(pending);
