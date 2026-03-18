@@ -1561,56 +1561,114 @@ async function fetchDashboardData() {
         const leaves = await leavesRes.json();
 
         // Total Employees
-        const totalEmployeesCountEl = document.getElementById('totalEmployeesCount');
+        const totalEmployeesCountEl = document.getElementById(
+          "totalEmployeesCount",
+        );
         if (totalEmployeesCountEl) {
-            totalEmployeesCountEl.textContent = users.length;
+          totalEmployeesCountEl.textContent = users.length;
+        }
+
+        const totalEmployeesDeltaEl = document.getElementById(
+          "totalEmployeesDeltaText",
+        );
+        if (totalEmployeesDeltaEl) {
+          const now = new Date();
+          const currentMonthStart = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            1,
+          );
+          const previousMonthStart = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            1,
+          );
+
+          const hiresThisMonth = users.filter((u) => {
+            const rawDate = u.joinDate || u.createdAt;
+            if (!rawDate) return false;
+            const d = new Date(rawDate);
+            return d >= currentMonthStart;
+          }).length;
+
+          const hiresLastMonth = users.filter((u) => {
+            const rawDate = u.joinDate || u.createdAt;
+            if (!rawDate) return false;
+            const d = new Date(rawDate);
+            return d >= previousMonthStart && d < currentMonthStart;
+          }).length;
+
+          const delta = hiresThisMonth - hiresLastMonth;
+          let deltaClass = "text-muted";
+          if (delta > 0) deltaClass = "text-success fw-semibold";
+          if (delta < 0) deltaClass = "text-danger fw-semibold";
+
+          const deltaText =
+            delta === 0
+              ? "No change vs last month"
+              : `${delta > 0 ? "+" : ""}${delta} vs last month`;
+          totalEmployeesDeltaEl.className = deltaClass;
+          totalEmployeesDeltaEl.textContent = deltaText;
         }
 
         // Today's Attendance
-        const todaysAttendanceCountEl = document.getElementById('todaysAttendanceCount');
+        const todaysAttendanceCountEl = document.getElementById(
+          "todaysAttendanceCount",
+        );
         if (todaysAttendanceCountEl) {
-            const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-            const presentTodayCount = attendance.filter(a =>
-                a.date === todayStr &&
-                ['present', 'late', 'half-day'].includes(a.status)
-            ).length;
+          const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          const presentTodayCount = attendance.filter(
+            (a) =>
+              a.date === todayStr &&
+              ["present", "late", "half-day"].includes(a.status),
+          ).length;
 
-            // Format 118/124
-            todaysAttendanceCountEl.innerHTML = `${presentTodayCount}<span style="font-size: 18px; color: var(--text-muted); font-weight: 500;">/${users.length}</span>`;
+          // Format 118/124
+          todaysAttendanceCountEl.innerHTML = `${presentTodayCount}<span style="font-size: 18px; color: var(--text-muted); font-weight: 500;">/${users.length}</span>`;
 
-            // presence rate percentage
-            const rate = users.length > 0 ? Math.round((presentTodayCount / users.length) * 100) : 0;
-            const rateSpan = document.querySelector('.ph-user-check').parentElement.parentElement.nextElementSibling.querySelector('.text-success');
-            if (rateSpan) {
-                // Update color based on rate
-                if (rate < 80) rateSpan.className = 'text-warning fw-semibold';
-                if (rate < 50) rateSpan.className = 'text-danger fw-semibold';
-                rateSpan.textContent = rate + '%';
-            }
+          const presenceRateEl = document.getElementById(
+            "attendancePresenceRateText",
+          );
+          if (presenceRateEl) {
+            const rate =
+              users.length > 0
+                ? Math.round((presentTodayCount / users.length) * 100)
+                : 0;
+            let rateClass = "text-success fw-semibold";
+            if (rate < 80) rateClass = "text-warning fw-semibold";
+            if (rate < 50) rateClass = "text-danger fw-semibold";
+            presenceRateEl.className = rateClass;
+            presenceRateEl.textContent = `${rate}% presence rate`;
+          }
         }
 
         // Employees on Leave Today
-        const employeesOnLeaveCountEl = document.getElementById('employeesOnLeaveCount');
+        const employeesOnLeaveCountEl = document.getElementById(
+          "employeesOnLeaveCount",
+        );
         if (employeesOnLeaveCountEl) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const onLeaveToday = leaves.filter(l =>
-                l.status === 'approved' &&
-                todayStr >= l.startDate &&
-                todayStr <= l.endDate
-            ).length;
+          const todayStr = new Date().toISOString().split("T")[0];
+          const onLeaveToday = leaves.filter(
+            (l) =>
+              l.status === "approved" &&
+              todayStr >= l.startDate &&
+              todayStr <= l.endDate,
+          ).length;
             employeesOnLeaveCountEl.textContent = onLeaveToday;
 
-            // pending leave requests text
-            const pendingLeaves = leaves.filter(l => l.status === 'pending').length;
-            const pendingSpan = document.querySelector('.ph-calendar-x').parentElement.parentElement.nextElementSibling.querySelector('.text-danger');
-            if (pendingSpan) {
-                if (pendingLeaves === 0) {
-                    pendingSpan.className = 'text-success fw-semibold';
-                    pendingSpan.textContent = "0 Pending";
-                } else {
-                    pendingSpan.textContent = `${pendingLeaves} Pending`;
-                }
-            }
+          const pendingLeaves = leaves.filter(
+            (l) => l.status === "pending",
+          ).length;
+          const pendingRequestsEl = document.getElementById(
+            "pendingRequestsText",
+          );
+          if (pendingRequestsEl) {
+            pendingRequestsEl.className =
+              pendingLeaves === 0
+                ? "text-success fw-semibold"
+                : "text-danger fw-semibold";
+            pendingRequestsEl.textContent = `${pendingLeaves} pending approval request${pendingLeaves === 1 ? "" : "s"}`;
+          }
         }
 
         // Recent Hirings

@@ -75,13 +75,13 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## Dummy or misleading UI
 
-### 9. Admin dashboard contains hard-coded fake copy
+### ~~9. Admin dashboard contains hard-coded fake copy~~
 
 -   File: client/dashboard.html
--   The admin dashboard contains static text such as:
-    -   `2 Pending approval requests`
--   This text is not derived from live data.
--   Result: the dashboard mixes real API data with fake fixed values.
+-   File: client/script.js
+-   Resolved by replacing static helper copy with dynamic placeholders and binding those labels to live values from dashboard API data.
+-   Pending approvals, attendance presence rate, and month-over-month employee change now render from fetched records.
+-   Result: the admin dashboard cards no longer show hard-coded fake values.
 
 ### 10. Leave page stats include fake supporting text
 
