@@ -521,7 +521,7 @@ function renderEmployeePage() {
     actionsCell.innerHTML = `<button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="openEditEmployeeModal('${user._id}', '${user.role || "employee"}', '${(user.department || "Sophia Academy").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${(user.subDepartment || "Teaching Staff").replace(/'/g, "\\'").replace(/"/g, "&quot;")}', '${user.status || "Active"}')"><i class="ph ph-pencil"></i> Edit</button>`;
     tr.appendChild(actionsCell);
     tbody.appendChild(tr);
-  };);
+  });
 
   const countText = document.getElementById("employeeCountText");
   if (countText) {
