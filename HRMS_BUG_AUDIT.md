@@ -189,27 +189,30 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## Security and architectural problems
 
-### 20. Forgot-password flow exposes the reset code to the client
+### ~~20. Forgot-password flow exposes the reset code to the client~~
 
 -   File: server/server.js
 -   File: client/login/login.js
 -   The server returns `resetCode` in the API response and logs it to the console.
 -   The client then renders the reset code directly in the UI.
--   Result: this is a development shortcut, not a real password reset implementation.
+-   Resolved by hashing reset codes server-side, removing default reset-code exposure from API/UI, and only allowing code exposure when explicitly enabled via `ALLOW_DEV_RESET_CODE=true`.
+-   Result: reset codes are no longer leaked by default while still supporting opt-in local debugging.
 
-### 21. Legacy `/create-admin` endpoint is unsafe
+### ~~21. Legacy `/create-admin` endpoint is unsafe~~
 
 -   File: server/server.js
 -   The route is unauthenticated and can create an admin account directly.
 -   It also returns the created admin object.
--   Result: this is a major security problem if exposed outside development.
+-   Resolved by removing the legacy `/create-admin` route and deleting the unused `admin` model.
+-   Result: unauthenticated admin-creation path is no longer present.
 
-### 22. API endpoints are called without auth protection from the client
+### ~~22. API endpoints are called without auth protection from the client~~
 
 -   File: client/script.js
 -   Most data fetches use plain requests to `/api/users`, `/api/attendance`, and `/api/leaves` without an Authorization header.
 -   The backend routes shown here also do not enforce authentication.
--   Result: role-based access is mostly cosmetic rather than enforced.
+-   Resolved by enforcing bearer-token middleware on protected API routes, using `apiFetch()` with auth headers in client data calls, and tightening CORS to local dev + configured frontend origins.
+-   Result: endpoint access is authenticated/role-guarded without breaking localhost/live-server workflows.
 
 ## UX and maintainability issues
 
@@ -241,6 +244,6 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 2.  ~~Fix employee leave filtering to use `loggedInUser.id` and populated `_id` consistently.~~ Centralized record matching now handles `id` and `_id` correctly.
 3.  ~~Fix role initialization so stale cached data does not render mixed admin/employee UI.~~ Protected pages now wait for verified role before rendering role-specific sections.
 4.  ~~Remove or replace all hard-coded dashboard and leave stat copy with real calculated values.~~ Dashboard and leave stat copy is now driven by live data/loading states.
-5.  Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route. (Pending)
+5.  ~~Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route.~~ Protected routes are bearer-token enforced and the legacy admin-creation route has been removed.
 6.  ~~Standardize all date handling on raw `YYYY-MM-DD` strings without timezone conversion.~~ Date-key normalization is centralized via `toDateKey()` and `getTodayDateKey()`.
 7.  ~~Replace or remove all dummy buttons, fake pagination, and dead links.~~ Leave filters/review, employee pagination, and attendance load-more are now functional.

@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
       enum: ["Active", "On Leave", "Onboarding", "Inactive"],
       default: "Active",
     },
-    resetToken: { type: String, default: null },
+    resetTokenHash: { type: String, default: null },
     resetTokenExpiry: { type: Date, default: null },
   },
   { timestamps: true },

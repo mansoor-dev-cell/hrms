@@ -196,14 +196,11 @@ fpSubmit.addEventListener("click", async () => {
 
     forgotEmail = email;
 
-    // Show reset code notice (dev mode: code is returned in response)
+    // Always show generic confirmation. Reset codes should not be exposed in UI.
     const notice = document.getElementById("resetCodeNotice");
-    if (data.resetCode) {
-      notice.innerHTML = `A reset code has been generated.<br>Your reset code: <strong>${data.resetCode}</strong>`;
-    } else {
-      notice.textContent = "Check your email for the reset code.";
-    }
-    document.getElementById("rpCode").value = data.resetCode || "";
+    notice.textContent =
+      "If the account exists, use the reset code sent to the configured channel.";
+    document.getElementById("rpCode").value = "";
     showResetPassword();
   } catch {
     showFeedback(fpFeedback, "error", "Cannot reach server. Is it running?");

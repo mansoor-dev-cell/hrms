@@ -3,20 +3,60 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 require("dotenv").config();
 
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-const Admin = require("./models/admin");
 const User = require("./models/user");
 const Attendance = require("./models/attendance");
 const Leave = require("./models/leave");
 
 const app = express();
 
-app.use(cors());
+function parseAllowedOrigins() {
+  const defaults = [
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5000",
+    "http://127.0.0.1:5500",
+  ];
+
+  const configured = String(process.env.FRONTEND_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return new Set([...defaults, ...configured]);
+}
+
+const allowedOrigins = parseAllowedOrigins();
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed"));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
+
+function hashResetCode(code) {
+  return crypto.createHash("sha256").update(String(code)).digest("hex");
+}
+
+function isDevResetCodeExposureEnabled() {
+  return (
+    String(process.env.ALLOW_DEV_RESET_CODE || "").toLowerCase() === "true"
+  );
+}
 
 function isAdminRole(user) {
   return user && String(user.role).toLowerCase() === "admin";
@@ -162,19 +202,22 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
     const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-    user.resetToken = resetToken;
+    user.resetTokenHash = hashResetCode(resetToken);
     user.resetTokenExpiry = resetTokenExpiry;
     await user.save();
 
-    // NOTE: In production, send this code by email.
-    // For this local HRMS, the code is returned in the response.
-    console.log(`[Password Reset] Code for ${email}: ${resetToken}`);
-
-    res.json({
+    const payload = {
       message: "If this email is registered, a reset code has been sent.",
-      // Remove the next line in production and use email delivery instead:
-      resetCode: resetToken
-    });
+    };
+
+    if (isDevResetCodeExposureEnabled()) {
+      payload.resetCode = resetToken;
+      console.log(
+        `[Password Reset][DEV ONLY] Code for ${email}: ${resetToken}`,
+      );
+    }
+
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ message: "Server error.", error: err.message });
   }
@@ -192,14 +235,19 @@ app.post("/api/auth/reset-password", async (req, res) => {
       return res.status(400).json({ message: "Password must be at least 6 characters." });
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user || user.resetToken !== token)
-      return res.status(400).json({ message: "Invalid or expired reset code." });
+    const providedHash = hashResetCode(token);
+    const storedHash = user ? user.resetTokenHash : null;
+
+    if (!user || !storedHash || storedHash !== providedHash)
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset code." });
 
     if (!user.resetTokenExpiry || user.resetTokenExpiry < new Date())
       return res.status(400).json({ message: "Reset code has expired. Please request a new one." });
 
     user.password = await bcrypt.hash(newPassword, 12);
-    user.resetToken = null;
+    user.resetTokenHash = null;
     user.resetTokenExpiry = null;
     await user.save();
 
@@ -354,19 +402,6 @@ app.put(
     }
   },
 );
-
-// ── Legacy: Create admin (unchanged) ──────────────────────
-app.post("/create-admin", async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newAdmin = new Admin({ name, email, password: hashedPassword });
-    await newAdmin.save();
-    res.json({ message: "Admin created successfully", admin: newAdmin });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.listen(5000, () => {
   console.log("🚀 Server running on port 5000");
