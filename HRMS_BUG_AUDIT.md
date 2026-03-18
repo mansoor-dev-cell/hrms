@@ -144,7 +144,7 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 
 ## Data presentation inconsistencies
 
-### 16. Recent Hirings table headers do not match rendered data
+### ~~16. Recent Hirings table headers do not match rendered data~~
 
 -   File: client/dashboard.html
 -   File: client/script.js
@@ -158,30 +158,34 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
     -   Department
     -   Role
     -   Join Date
--   Result: column headings and cell values do not line up.
+-   Resolved by updating the dashboard table header order to `Employee`, `Department`, `Role`, `Join Date`.
+-   Result: column headings now line up with rendered values.
 
-### 17. Attendance colors and legend semantics are inconsistent
+### ~~17. Attendance colors and legend semantics are inconsistent~~
 
 -   File: client/dashboard.html
 -   File: client/script.js
 -   The current legend uses a generic `Leave` label while the calendar only colors approved leave.
 -   `late` is shown using the same color as present, but the legend does not explain that.
 -   `half-day` exists in attendance records and tables but is not represented in the employee calendar legend.
--   Result: users cannot reliably interpret calendar colors.
+-   Resolved by updating the legend label to `Present / Late`, adding a dedicated `Half Day` legend entry, and rendering half-day days with a distinct visual style on the calendar.
+-   Result: calendar status colors and legend semantics are consistent and interpretable.
 
-### 18. Timezone-sensitive date handling is inconsistent across the app
+### ~~18. Timezone-sensitive date handling is inconsistent across the app~~
 
 -   File: client/script.js
 -   Several places convert stored `YYYY-MM-DD` strings via `new Date(...).toISOString().split('T')[0]`.
 -   This can shift dates depending on timezone and browser parsing behavior.
--   Result: filtering, per-day matching, and monthly stats can become inconsistent across environments.
+-   Resolved by centralizing date-key normalization in helper utilities (`toDateKey()` + `getTodayDateKey()`) and replacing direct ISO-split conversions in attendance, leave, and dashboard calculations.
+-   Result: per-day matching and date-based stats are now consistent across timezones.
 
-### 19. Leave page wording is inconsistent for admin vs employee mode
+### ~~19. Leave page wording is inconsistent for admin vs employee mode~~
 
 -   File: client/leave.html
 -   File: client/script.js
 -   The page starts as a management/admin page in HTML, then JS mutates labels for employees after load.
--   Result: the page briefly represents the wrong mode and relies heavily on runtime mutation instead of stable role-specific markup.
+-   Resolved by changing leave-page heading/subtitle to neutral copy in HTML and removing runtime employee-only text mutation for page/stat labels.
+-   Result: initial leave-page wording is consistent before and after role initialization.
 
 ## Security and architectural problems
 

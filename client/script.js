@@ -305,9 +305,25 @@ function isSameUserRecord(recordUser, currentUser) {
 }
 
 function toDateKey(value) {
+  if (!value) return "";
+
+  if (typeof value === "string") {
+    const datePrefixMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (datePrefixMatch) {
+      return datePrefixMatch[1];
+    }
+  }
+
   const date = value instanceof Date ? new Date(value) : new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayDateKey() {
+  return toDateKey(new Date());
 }
 
 function getAttendanceDayCredit(status) {
@@ -598,10 +614,10 @@ async function fetchAndDisplayAttendance() {
         let absentCount = 0;
         let lateCount = 0;
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayDateKey();
 
         records.forEach(r => {
-            const recDateStr = r.date ? new Date(r.date).toISOString().split('T')[0] : '';
+          const recDateStr = toDateKey(r.date);
             if (recDateStr === todayStr) {
                 if (r.status === 'present' || r.status === 'half-day') presentCount++;
                 if (r.status === 'absent') absentCount++;
@@ -788,7 +804,7 @@ function setupAttendanceSearch() {
 
         const filtered = allAttendanceData.filter(record => {
             // Normalize: record.date may be "2026-03-10T00:00:00.000Z" or "2026-03-10"
-            const recordDateStr = record.date ? new Date(record.date).toISOString().split('T')[0] : '';
+            const recordDateStr = toDateKey(record.date);
             const dateMatch = dateVal === '' ? true : recordDateStr === dateVal;
 
             const user = record.employeeId || {};
@@ -917,7 +933,7 @@ async function fetchAndDisplayLeaves() {
         const previousMonthYear = previousMonthDate.getFullYear();
 
         // Strip out time matching for "today"
-        const todayStr = now.toISOString().split('T')[0];
+        const todayStr = getTodayDateKey();
 
         allLeavesData.forEach((l) => {
           if (l.status === "pending") pending++;
@@ -1378,7 +1394,9 @@ async function fetchEmployeeDashboardData() {
       // ── Build attendance map: YYYY-MM-DD → status ──────────────────────────
       const attendanceMap = {};
       myAttendance.forEach((a) => {
-        attendanceMap[new Date(a.date).toISOString().split("T")[0]] = a.status;
+        const dateKey = toDateKey(a.date);
+        if (!dateKey) return;
+        attendanceMap[dateKey] = a.status;
       });
       // Overlay leave ranges so the calendar reflects approval state.
       myLeaves.forEach((l) => {
@@ -1388,7 +1406,8 @@ async function fetchEmployeeDashboardData() {
           d <= new Date(l.endDate);
           d.setDate(d.getDate() + 1)
         ) {
-          const dateKey = d.toISOString().split("T")[0];
+          const dateKey = toDateKey(d);
+          if (!dateKey) continue;
           if (l.status === "approved") {
             attendanceMap[dateKey] = "leave-approved";
           } else if (!attendanceMap[dateKey]) {
@@ -1436,7 +1455,7 @@ async function fetchEmployeeDashboardData() {
 
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = getTodayDateKey();
 
         for (let i = 0; i < firstDay; i++)
           grid.appendChild(document.createElement("div"));
@@ -1481,6 +1500,11 @@ async function fetchEmployeeDashboardData() {
             bg = "var(--success)";
             color = "#fff";
             title = "Late / Present";
+          } else if (status === "half-day") {
+            bg = "rgba(79, 70, 229, 0.18)";
+            color = "var(--primary)";
+            border = "1.5px dashed var(--primary)";
+            title = "Half Day";
           } else if (status === "absent") {
             bg = "rgba(239,68,68,0.22)";
             color = "var(--danger)";
@@ -1784,19 +1808,6 @@ function setupLeaveFormForRole(user) {
             avatarEl.textContent = initials;
         }
 
-        // Tailor page labels for employee self-service
-        const pageTitle = document.querySelector('.page-title');
-        const pageSub   = document.querySelector('.page-subtitle');
-        if (pageTitle) pageTitle.textContent = 'My Leaves';
-        if (pageSub)   pageSub.textContent   = 'Your personal leave history and requests.';
-
-        // Employee-specific stat card labels
-        const pendingLabel = document.getElementById('pendingRequestsCount');
-        if (pendingLabel) pendingLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'MY PENDING';
-        const approvedLabel = document.getElementById('approvedThisMonthCount');
-        if (approvedLabel) approvedLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'MY APPROVED THIS MONTH';
-        const todayLabel = document.getElementById('onLeaveTodayCount');
-        if (todayLabel) todayLabel.closest('.card-body').querySelector('p.text-muted').textContent = 'ON LEAVE TODAY';
     }
 }
 
@@ -1873,10 +1884,10 @@ async function fetchDashboardData() {
           "todaysAttendanceCount",
         );
         if (todaysAttendanceCountEl) {
-          const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+          const todayStr = getTodayDateKey(); // YYYY-MM-DD
           const presentTodayCount = attendance.filter(
             (a) =>
-              a.date === todayStr &&
+              toDateKey(a.date) === todayStr &&
               ["present", "late", "half-day"].includes(a.status),
           ).length;
 
@@ -1904,7 +1915,7 @@ async function fetchDashboardData() {
           "employeesOnLeaveCount",
         );
         if (employeesOnLeaveCountEl) {
-          const todayStr = new Date().toISOString().split("T")[0];
+          const todayStr = getTodayDateKey();
           const onLeaveToday = leaves.filter(
             (l) =>
               l.status === "approved" &&
@@ -1938,7 +1949,8 @@ async function fetchDashboardData() {
             recentHiringsTbody.innerHTML = '';
 
             if (top5.length === 0) {
-                recentHiringsTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;" class="text-muted">No hirings found.</td></tr>';
+              recentHiringsTbody.innerHTML =
+                '<tr><td colspan="4" style="text-align: center; padding: 20px;" class="text-muted">No hirings found.</td></tr>';
                 return;
             }
 
