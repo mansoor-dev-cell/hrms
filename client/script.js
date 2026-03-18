@@ -999,9 +999,6 @@ async function fetchAndDisplayLeaves() {
           }
         }
 
-        // Update Notification Bell Globally
-        updateNotificationBell(pending);
-
         renderLeavesTable(allLeavesData);
         setupLeaveSearch();
     } catch (error) {
@@ -1244,18 +1241,6 @@ async function updateLeaveStatus(leaveId, newStatus) {
         }
     } catch (err) {
         console.error("Failed to update status", err);
-    }
-}
-
-function updateNotificationBell(count) {
-    const badge = document.getElementById('bellBadge');
-    if (!badge) return;
-
-    if (count > 0) {
-        badge.textContent = count;
-        badge.style.display = 'block';
-    } else {
-        badge.style.display = 'none';
     }
 }
 

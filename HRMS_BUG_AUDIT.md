@@ -132,12 +132,15 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Resolved by replacing the placeholder comment with an accurate section label.
 -   Result: dashboard markup no longer carries misleading placeholder wording.
 
-### 15. Notification badge logic exists without matching markup
+### ~~15. Notification badge logic exists without matching markup~~
 
 -   File: client/script.js
+-   File: client/emp.html
+-   File: client/attendance.html
 -   `updateNotificationBell()` looks for `#bellBadge`.
 -   There is no `bellBadge` element in the current HTML files.
--   Result: the notification badge update code never displays anything.
+-   Resolved by removing the notification bell UI from page headers and deleting notification badge update logic.
+-   Result: the app no longer ships unused notification feature code or dead UI controls.
 
 ## Data presentation inconsistencies
 
