@@ -62,6 +62,85 @@ function isAdminRole(user) {
   return user && String(user.role).toLowerCase() === "admin";
 }
 
+const DEFAULT_DEPARTMENT = "Sophia Academy";
+const VALID_DEPARTMENTS = ["Sophia Academy", "Global Online College"];
+const VALID_SUB_DEPARTMENTS = {
+  "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
+  "Global Online College": ["Sales Team", "Marketing Team"],
+};
+
+function normalizeUserDepartmentFields(department, subDepartment) {
+  const deptRaw = String(department || "").trim();
+  const normalizedDepartment = VALID_DEPARTMENTS.includes(deptRaw)
+    ? deptRaw
+    : DEFAULT_DEPARTMENT;
+
+  const validSubDepartments =
+    VALID_SUB_DEPARTMENTS[normalizedDepartment] ||
+    VALID_SUB_DEPARTMENTS[DEFAULT_DEPARTMENT];
+
+  const subRaw = String(subDepartment || "").trim();
+  const normalizedSubDepartment = validSubDepartments.includes(subRaw)
+    ? subRaw
+    : validSubDepartments[0];
+
+  return {
+    department: normalizedDepartment,
+    subDepartment: normalizedSubDepartment,
+  };
+}
+
+async function migrateLegacyUsers() {
+  const users = await User.find(
+    {},
+    "department subDepartment status joinDate createdAt",
+  ).lean();
+  if (!users.length) return;
+
+  const updates = [];
+  for (const user of users) {
+    const normalized = normalizeUserDepartmentFields(
+      user.department,
+      user.subDepartment,
+    );
+
+    const patch = {};
+    if (user.department !== normalized.department) {
+      patch.department = normalized.department;
+    }
+    if (user.subDepartment !== normalized.subDepartment) {
+      patch.subDepartment = normalized.subDepartment;
+    }
+    if (!user.status) {
+      patch.status = "Active";
+    }
+    if (!user.joinDate) {
+      patch.joinDate = user.createdAt || new Date();
+    }
+
+    if (Object.keys(patch).length) {
+      updates.push({
+        updateOne: {
+          filter: { _id: user._id },
+          update: { $set: patch },
+        },
+      });
+    }
+  }
+
+  if (!updates.length) {
+    console.log("ℹ️ User data migration: no legacy records found.");
+    return;
+  }
+
+  const result = await User.bulkWrite(updates);
+  const modifiedCount =
+    result.modifiedCount || result.nModified || result.nMatched || 0;
+  console.log(
+    `✅ User data migration complete. Updated ${modifiedCount} record(s).`,
+  );
+}
+
 async function authenticateToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -95,7 +174,14 @@ function requireAdmin(req, res, next) {
 // ── MongoDB connection ──────────────────────────────────────
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
+  .then(async () => {
+    console.log("✅ MongoDB Connected");
+    try {
+      await migrateLegacyUsers();
+    } catch (migrationError) {
+      console.log("⚠️ User data migration failed:", migrationError.message);
+    }
+  })
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
 // ── Health check ───────────────────────────────────────────
@@ -127,6 +213,11 @@ app.post("/api/auth/register", async (req, res) => {
       { expiresIn: "7d" },
     );
 
+    const normalizedDept = normalizeUserDepartmentFields(
+      newUser.department,
+      newUser.subDepartment,
+    );
+
     res.status(201).json({
       message: "Account created successfully.",
       token,
@@ -135,8 +226,8 @@ app.post("/api/auth/register", async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        department: newUser.department,
-        subDepartment: newUser.subDepartment,
+        department: normalizedDept.department,
+        subDepartment: normalizedDept.subDepartment,
         joinDate: newUser.joinDate,
       },
     });
@@ -170,6 +261,11 @@ app.post("/api/auth/login", async (req, res) => {
       { expiresIn: "7d" },
     );
 
+    const normalizedDept = normalizeUserDepartmentFields(
+      user.department,
+      user.subDepartment,
+    );
+
     res.json({
       message: "Signed in successfully.",
       token,
@@ -178,8 +274,8 @@ app.post("/api/auth/login", async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        department: user.department,
-        subDepartment: user.subDepartment,
+        department: normalizedDept.department,
+        subDepartment: normalizedDept.subDepartment,
         joinDate: user.joinDate,
       },
     });
@@ -265,14 +361,18 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // GET /api/auth/me
 app.get("/api/auth/me", authenticateToken, async (req, res) => {
   const user = req.user;
+  const normalizedDept = normalizeUserDepartmentFields(
+    user.department,
+    user.subDepartment,
+  );
 
   res.json({
     id: user._id,
     name: user.name,
     email: user.email,
     role: user.role,
-    department: user.department,
-    subDepartment: user.subDepartment,
+    department: normalizedDept.department,
+    subDepartment: normalizedDept.subDepartment,
     joinDate: user.joinDate,
     status: user.status,
   });
@@ -283,19 +383,26 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
 app.get("/api/users", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.find().select("-password");
-    res.json(users);
+    const normalizedUsers = users.map((userDoc) => {
+      const user = userDoc.toObject();
+      const normalizedDept = normalizeUserDepartmentFields(
+        user.department,
+        user.subDepartment,
+      );
+      return {
+        ...user,
+        department: normalizedDept.department,
+        subDepartment: normalizedDept.subDepartment,
+      };
+    });
+
+    res.json(normalizedUsers);
   } catch (err) {
     res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
 
 // PATCH /api/users/:id  (admin-only: update role, department, subDepartment, status)
-const VALID_DEPARTMENTS = ["Sophia Academy", "Global Online College"];
-const VALID_SUB_DEPARTMENTS = {
-  "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
-  "Global Online College": ["Sales Team", "Marketing Team"],
-};
-
 app.patch("/api/users/:id", authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { role, department, subDepartment, status } = req.body;
