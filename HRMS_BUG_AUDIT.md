@@ -95,14 +95,16 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Approved This Month now shows a computed month-over-month trend using current vs previous month approvals.
 -   Result: leave stat supporting text is data-driven and no longer fake.
 
-### 11. Review links and filter links are placeholders
+### ~~11. Review links and filter links are placeholders~~
 
 -   File: client/leave.html
+-   File: client/script.js
 -   Several links use `href="#"`, including:
     -   `Review all requests →`
     -   the leave status filter links
--   The filter links rely on JS click interception, but the review link is just a dead placeholder.
--   Result: the UI suggests navigation/actions that do not exist.
+-   Resolved by replacing placeholder anchor links with real button controls for leave status filters.
+-   The review control now applies the pending filter and scrolls to the leave table, so it performs a concrete action.
+-   Result: leave filter/review controls are functional and no longer dead placeholders.
 
 ### 12. Pagination controls are dummy on the employee page
 

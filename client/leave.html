@@ -90,9 +90,9 @@
                                 </div>
                             </div>
                             <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
-                                <a href="#"
-                                    style="color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 500;">Review
-                                    all requests →</a>
+                                <button id="reviewPendingRequestsBtn" type="button"
+                                    style="color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 500; background: none; border: none; padding: 0; cursor: pointer;">Review
+                                    all requests →</button>
                             </div>
                         </div>
                     </div>
@@ -142,15 +142,15 @@
 
                 <!-- Filters -->
                 <div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <a href="#" class="btn btn-outline leave-status-link" data-status=""
+                    <button type="button" class="btn btn-outline leave-status-link" data-status=""
                         style="background-color: var(--bg-surface); border-color: var(--primary); color: var(--primary);">All
-                        Requests</a>
-                    <a href="#" class="btn btn-outline leave-status-link" data-status="pending"
-                        style="background-color: var(--bg-surface);">Pending</a>
-                    <a href="#" class="btn btn-outline leave-status-link" data-status="approved"
-                        style="background-color: var(--bg-surface);">Approved</a>
-                    <a href="#" class="btn btn-outline leave-status-link" data-status="rejected"
-                        style="background-color: var(--bg-surface);">Rejected</a>
+                        Requests</button>
+                    <button type="button" class="btn btn-outline leave-status-link" data-status="pending"
+                        style="background-color: var(--bg-surface);">Pending</button>
+                    <button type="button" class="btn btn-outline leave-status-link" data-status="approved"
+                        style="background-color: var(--bg-surface);">Approved</button>
+                    <button type="button" class="btn btn-outline leave-status-link" data-status="rejected"
+                        style="background-color: var(--bg-surface);">Rejected</button>
 
                     <div id="leaveSearchWrap" style="margin-left: auto; width: 250px; position: relative;">
                         <i class="ph ph-magnifying-glass"

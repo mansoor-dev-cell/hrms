@@ -908,30 +908,48 @@ function renderLeavesTable(leavesToRender) {
 function setupLeaveSearch() {
     const searchInput = document.getElementById('leaveSearchFilter');
     const statusLinks = document.querySelectorAll('.leave-status-link');
+  const reviewBtn = document.getElementById("reviewPendingRequestsBtn");
     let currentStatus = '';
 
     if (searchInput) {
-        searchInput.addEventListener('input', runLeaveFilter);
+    if (!searchInput.dataset.leaveFilterBound) {
+      searchInput.addEventListener("input", runLeaveFilter);
+      searchInput.dataset.leaveFilterBound = "true";
+    }
     }
 
-    statusLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-
-            // Remove active styles from all
-            statusLinks.forEach(l => {
-                l.style.borderColor = 'transparent';
-                l.style.color = 'var(--text-main)';
-            });
-
-            // Add active styles to clicked
-            link.style.borderColor = 'var(--primary)';
-            link.style.color = 'var(--primary)';
-
-            currentStatus = link.getAttribute('data-status') || '';
-            runLeaveFilter();
-        });
+  function setActiveStatus(status) {
+    currentStatus = status || "";
+    statusLinks.forEach((link) => {
+      const linkStatus = link.getAttribute("data-status") || "";
+      const isActive = linkStatus === currentStatus;
+      link.style.borderColor = isActive ? "var(--primary)" : "transparent";
+      link.style.color = isActive ? "var(--primary)" : "var(--text-main)";
     });
+  }
+
+    statusLinks.forEach((link) => {
+      if (link.dataset.leaveFilterBound) return;
+      link.addEventListener("click", () => {
+        setActiveStatus(link.getAttribute("data-status"));
+        runLeaveFilter();
+      });
+      link.dataset.leaveFilterBound = "true";
+    });
+
+  if (reviewBtn && !reviewBtn.dataset.leaveFilterBound) {
+    reviewBtn.addEventListener("click", () => {
+      setActiveStatus("pending");
+      runLeaveFilter();
+      const tableBody = document.getElementById("leaveTableBody");
+      if (tableBody) {
+        tableBody.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+    reviewBtn.dataset.leaveFilterBound = "true";
+  }
+
+  setActiveStatus(currentStatus);
 
     function runLeaveFilter() {
         if (!allLeavesData) return;
