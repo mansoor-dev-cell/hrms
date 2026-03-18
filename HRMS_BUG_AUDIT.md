@@ -55,12 +55,16 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Protected pages now start in a neutral `role-pending` state and only reveal role-specific sections after `/api/auth/me` confirms the active user.
 -   Result: admin-only data and actions are no longer exposed just because the browser toggled CSS classes.
 
-### 7. Cached user role can briefly render the wrong UI
+### ~~7. Cached user role can briefly render the wrong UI~~
 
 -   File: client/script.js
--   On page load, the app first calls `applyRoleBasedAccess(user)` using cached `localStorage` data and only later fetches `/api/auth/me`.
--   If localStorage is stale, the wrong role UI can render first.
--   Result: admin and employee sections can flash incorrectly or appear mixed until the API call completes.
+-   File: client/dashboard.html
+-   File: client/leave.html
+-   File: client/emp.html
+-   File: client/attendance.html
+-   Resolved by removing the initial role application from cached `localStorage` data and waiting for `/api/auth/me` before initializing page content.
+-   Protected pages now load in a neutral `role-pending` state, so stale cached role data cannot briefly reveal the wrong admin or employee sections.
+-   Result: role-specific UI only appears after the server confirms the active user.
 
 ### 8. Invalid or expired token is not handled cleanly
 
