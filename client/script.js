@@ -571,6 +571,9 @@ function setupEmployeeSearch() {
 
 // --- Attendance Logic ────────────────────────────────────────────────────────
 let allAttendanceData = [];
+let filteredAttendanceData = [];
+let attendanceVisibleCount = 0;
+const ATTENDANCE_LOAD_STEP = 10;
 
 async function fetchAndDisplayAttendance() {
     const tbody = document.getElementById('attendanceTableBody');
@@ -626,6 +629,7 @@ async function fetchAndDisplayAttendance() {
 
         renderAttendanceTable(allAttendanceData);
         setupAttendanceSearch();
+        setupAttendanceLoadMore();
 
         // Auto-apply today's date filter on first load
         if (dateFilterEl && dateFilterEl.value === todayStr) {
@@ -639,41 +643,71 @@ async function fetchAndDisplayAttendance() {
 }
 
 function renderAttendanceTable(recordsToRender) {
-    const tbody = document.getElementById('attendanceTableBody');
-    if (!tbody) return;
+  const tbody = document.getElementById("attendanceTableBody");
+  if (!tbody) return;
 
-    tbody.innerHTML = '';
+  filteredAttendanceData = Array.isArray(recordsToRender)
+    ? recordsToRender
+    : [];
+  attendanceVisibleCount = Math.min(
+    ATTENDANCE_LOAD_STEP,
+    filteredAttendanceData.length,
+  );
 
-    if (recordsToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">No attendance records found.</td></tr>';
-        return;
-    }
+  renderAttendanceRows();
+  updateAttendanceLoadMoreButton();
+}
 
-    const colors = [
-        { bg: 'rgba(79, 70, 229, 0.1)', text: 'var(--primary)' },
-        { bg: 'rgba(16, 185, 129, 0.1)', text: 'var(--success)' },
-        { bg: 'rgba(245, 158, 11, 0.1)', text: 'var(--warning)' },
-        { bg: 'rgba(239, 68, 68, 0.1)', text: 'var(--danger)' }
-    ];
+function renderAttendanceRows() {
+  const tbody = document.getElementById("attendanceTableBody");
+  if (!tbody) return;
 
-    recordsToRender.forEach((record, index) => {
-        const user = record.employeeId;
-        if (!user) return; // defensive
+  tbody.innerHTML = "";
 
-        const initials = user.name ? user.name.substring(0, 2).toUpperCase() : 'U';
-        const colorTheme = colors[index % colors.length];
-        const displayDate = new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+  if (filteredAttendanceData.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">No attendance records found.</td></tr>';
+    return;
+  }
 
-        let badgeClass = 'success';
-        if (record.status.toLowerCase() === 'absent') badgeClass = 'danger';
-        else if (record.status.toLowerCase() === 'late') badgeClass = 'warning';
-        else if (record.status.toLowerCase() === 'half-day') badgeClass = 'primary';
-        const statusStr = record.status.charAt(0).toUpperCase() + record.status.slice(1);
+  const colors = [
+    { bg: "rgba(79, 70, 229, 0.1)", text: "var(--primary)" },
+    { bg: "rgba(16, 185, 129, 0.1)", text: "var(--success)" },
+    { bg: "rgba(245, 158, 11, 0.1)", text: "var(--warning)" },
+    { bg: "rgba(239, 68, 68, 0.1)", text: "var(--danger)" },
+  ];
 
-        const checkInHtml = record.checkIn === '--:--' ? `<span class="text-muted">--:--</span>` : `<span class="${record.status === 'late' ? 'text-warning' : ''} fw-semibold">${record.checkIn}</span>`;
+  const recordsForDisplay = filteredAttendanceData.slice(
+    0,
+    attendanceVisibleCount,
+  );
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+  recordsForDisplay.forEach((record, index) => {
+    const user = record.employeeId;
+    if (!user) return; // defensive
+
+    const initials = user.name ? user.name.substring(0, 2).toUpperCase() : "U";
+    const colorTheme = colors[index % colors.length];
+    const displayDate = new Date(record.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+
+    let badgeClass = "success";
+    if (record.status.toLowerCase() === "absent") badgeClass = "danger";
+    else if (record.status.toLowerCase() === "late") badgeClass = "warning";
+    else if (record.status.toLowerCase() === "half-day") badgeClass = "primary";
+    const statusStr =
+      record.status.charAt(0).toUpperCase() + record.status.slice(1);
+
+    const checkInHtml =
+      record.checkIn === "--:--"
+        ? `<span class="text-muted">--:--</span>`
+        : `<span class="${record.status === "late" ? "text-warning" : ""} fw-semibold">${record.checkIn}</span>`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
             <td>
                 <div class="d-flex align-center gap-3">
                     <div class="avatar" style="width: 36px; height: 36px; font-size: 13px; background-color: ${colorTheme.bg}; color: ${colorTheme.text};">
@@ -681,19 +715,55 @@ function renderAttendanceTable(recordsToRender) {
                     </div>
                     <div>
                         <div class="fw-semibold text-main">${user.name}</div>
-                        <div class="text-muted" style="font-size: 12px;">${user.department || 'General'}</div>
+                        <div class="text-muted" style="font-size: 12px;">${user.department || "General"}</div>
                     </div>
                 </div>
             </td>
             <td style="vertical-align: middle;">${displayDate}</td>
             <td style="vertical-align: middle;">${checkInHtml}</td>
-            <td style="vertical-align: middle; ${record.checkOut === '--:--' ? 'color: var(--text-muted);' : ''}">${record.checkOut}</td>
+            <td style="vertical-align: middle; ${record.checkOut === "--:--" ? "color: var(--text-muted);" : ""}">${record.checkOut}</td>
             <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${statusStr}</span></td>
-            <td style="vertical-align: middle;" class="text-muted">${record.notes || '-'}</td>
+            <td style="vertical-align: middle;" class="text-muted">${record.notes || "-"}</td>
         `;
-        tbody.appendChild(tr);
-    });
+    tbody.appendChild(tr);
+  });
 }
+
+    function updateAttendanceLoadMoreButton() {
+      const loadMoreBtn = document.getElementById("attendanceLoadMoreBtn");
+      if (!loadMoreBtn) return;
+
+      const totalCount = filteredAttendanceData.length;
+      const remaining = totalCount - attendanceVisibleCount;
+
+      if (totalCount === 0 || remaining <= 0) {
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.textContent =
+          totalCount === 0 ? "No Records" : "All Records Loaded";
+        return;
+      }
+
+      loadMoreBtn.disabled = false;
+      const nextBatch = Math.min(ATTENDANCE_LOAD_STEP, remaining);
+      loadMoreBtn.textContent = `Load ${nextBatch} More Record${nextBatch === 1 ? "" : "s"}`;
+    }
+
+    function setupAttendanceLoadMore() {
+      const loadMoreBtn = document.getElementById("attendanceLoadMoreBtn");
+      if (!loadMoreBtn || loadMoreBtn.dataset.bound) return;
+
+      loadMoreBtn.addEventListener("click", () => {
+        if (attendanceVisibleCount >= filteredAttendanceData.length) return;
+        attendanceVisibleCount = Math.min(
+          filteredAttendanceData.length,
+          attendanceVisibleCount + ATTENDANCE_LOAD_STEP,
+        );
+        renderAttendanceRows();
+        updateAttendanceLoadMoreButton();
+      });
+
+      loadMoreBtn.dataset.bound = "true";
+    }
 
 function setupAttendanceSearch() {
     const dateFilter = document.getElementById('attDateFilter');
@@ -703,8 +773,11 @@ function setupAttendanceSearch() {
 
     elements.forEach(el => {
         if (!el) return;
-        el.addEventListener('input', runAttFilter);
-        el.addEventListener('change', runAttFilter);
+      if (!el.dataset.attFilterBound) {
+        el.addEventListener("input", runAttFilter);
+        el.addEventListener("change", runAttFilter);
+        el.dataset.attFilterBound = "true";
+      }
     });
 
     function runAttFilter() {

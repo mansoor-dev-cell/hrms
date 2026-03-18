@@ -116,11 +116,14 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Search/filter actions reset to page 1 and paginate the filtered dataset.
 -   Result: employee pagination controls now behave as functional navigation, not static UI.
 
-### 13. "Load More Records" on attendance page is dummy
+### ~~13. "Load More Records" on attendance page is dummy~~
 
 -   File: client/attendance.html
--   There is a `Load More Records` button, but no JS logic is attached to it.
--   Result: the control is misleading and non-functional.
+-   File: client/script.js
+-   Resolved by wiring the button to incremental attendance table rendering.
+-   Attendance records now render in batches, and each click loads the next set from the active filtered results.
+-   The button state/text updates to reflect remaining records and disables when all rows are shown.
+-   Result: the control is functional and no longer misleading.
 
 ### 14. Dashboard still labels a section as placeholder
 
