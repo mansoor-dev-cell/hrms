@@ -20,13 +20,11 @@ This document lists confirmed bugs, broken flows, inconsistent behavior, and dum
 -   Resolved by centralizing user-record matching and comparing `id`/`_id` consistently, with email only as a fallback.
 -   The leave page and employee dashboard now use the same identity matching logic for populated `employeeId` records.
 
-### 3. Attendance "Present Today" count is overwritten incorrectly
+### ~~3. Attendance "Present Today" count is overwritten incorrectly~~
 
 -   File: client/script.js
--   In `fetchAndDisplayAttendance()`, `attPresentToday` is assigned twice:
-    -   first with `presentCount + lateCount`
-    -   then immediately overwritten with `presentCount`
--   Result: the UI contradicts the surrounding logic and late arrivals are not counted consistently.
+-   Resolved by removing the duplicate overwrite and computing a single `presentTodayCount` value.
+-   The attendance card now consistently counts present, half-day, and late records the same way the page logic already intended.
 
 ### 4. Employee dashboard absence count is inflated and logically incorrect
 

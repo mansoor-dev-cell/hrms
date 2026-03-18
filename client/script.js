@@ -414,10 +414,10 @@ async function fetchAndDisplayAttendance() {
         const elPresent = document.getElementById('attPresentToday');
         const elAbsent = document.getElementById('attAbsentToday');
         const elLate = document.getElementById('attLateArrivals');
+        const presentTodayCount = presentCount + lateCount;
 
         if (elTotal) elTotal.textContent = users.length;
-        if (elPresent) elPresent.textContent = presentCount + lateCount;
-        if (elPresent) elPresent.textContent = presentCount;
+        if (elPresent) elPresent.textContent = presentTodayCount;
         if (elAbsent) elAbsent.textContent = absentCount;
         if (elLate) elLate.textContent = lateCount;
 
