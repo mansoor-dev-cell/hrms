@@ -14,6 +14,7 @@ const Attendance = require("./models/attendance");
 const Leave = require("./models/leave");
 
 const app = express();
+const PORT = Number(process.env.PORT) || 5001;
 
 function parseAllowedOrigins() {
   const defaults = [
@@ -671,6 +672,6 @@ app.post(
   },
 );
 
-app.listen(5000, () => {
-  console.log("🚀 Server running on port 5000");
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });

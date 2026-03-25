@@ -239,6 +239,7 @@ let filteredEmployeesData = [];
 let employeeCurrentPage = 1;
 const EMPLOYEE_PAGE_SIZE = 5;
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
+const LOCAL_BACKEND_PORT = "5001";
 const API_BASE_URL = resolveApiBaseUrl();
 const DEPARTMENT_MAP = {
   "Sophia Academy": ["Teaching Staff", "Non-Teaching Staff"],
@@ -258,8 +259,8 @@ function resolveApiBaseUrl() {
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1")
   ) {
-    // Always target Express backend in local development.
-    return "http://localhost:5000";
+    // Keep the same hostname in local development to avoid localhost/127.0.0.1 CORS mismatches.
+    return `http://${window.location.hostname}:${LOCAL_BACKEND_PORT}`;
   }
 
   const fromWindow =
@@ -297,8 +298,8 @@ function resolveApiBaseUrl() {
         const parsed = new URL(configured);
         const isLocalConfigured =
           parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
-        if (isLocalConfigured && parsed.port !== "5000") {
-          return "http://localhost:5000";
+        if (isLocalConfigured && parsed.port !== LOCAL_BACKEND_PORT) {
+          return `http://${window.location.hostname}:${LOCAL_BACKEND_PORT}`;
         }
       } catch {
         // Keep configured value when it is not a parseable absolute URL.
@@ -308,24 +309,24 @@ function resolveApiBaseUrl() {
   }
 
   if (typeof window !== "undefined" && window.location?.protocol === "file:") {
-    return "http://localhost:5000";
+    return `http://localhost:${LOCAL_BACKEND_PORT}`;
   }
 
-  // For localhost dev servers (Live Server on 5500, etc.), route to backend on port 5000
+  // For local dev servers, keep the same hostname to avoid localhost/127.0.0.1 CORS mismatches.
   if (
     typeof window !== "undefined" &&
     window.location?.hostname &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1")
   ) {
-    return "http://localhost:5000";
+    return `http://${window.location.hostname}:${LOCAL_BACKEND_PORT}`;
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
     return normalizeBaseUrl(window.location.origin);
   }
 
-  return "http://localhost:5000";
+  return `http://localhost:${LOCAL_BACKEND_PORT}`;
 }
 
 function getAuthToken() {

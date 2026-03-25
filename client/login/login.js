@@ -1,3 +1,4 @@
+const LOCAL_BACKEND_PORT = "5001";
 const API_BASE = resolveAuthApiBase();
 
 function normalizeBaseUrl(url) {
@@ -34,24 +35,24 @@ function resolveAuthApiBase() {
   if (configured) return `${configured}/api/auth`;
 
   if (typeof window !== "undefined" && window.location?.protocol === "file:") {
-    return "http://localhost:5000/api/auth";
+    return `http://localhost:${LOCAL_BACKEND_PORT}/api/auth`;
   }
 
-  // For localhost dev servers (Live Server on 5500, etc.), route to backend on port 5000
+  // For local dev servers, keep the same hostname to avoid localhost/127.0.0.1 CORS mismatches.
   if (
     typeof window !== "undefined" &&
     window.location?.hostname &&
     (window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1")
   ) {
-    return "http://localhost:5000/api/auth";
+    return `http://${window.location.hostname}:${LOCAL_BACKEND_PORT}/api/auth`;
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
     return `${normalizeBaseUrl(window.location.origin)}/api/auth`;
   }
 
-  return "http://localhost:5000/api/auth";
+  return `http://localhost:${LOCAL_BACKEND_PORT}/api/auth`;
 }
 
 // ── Element refs
