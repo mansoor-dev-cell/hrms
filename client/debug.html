@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug HRMS</title>
+</head>
+<body>
+    <h1>HRMS Debug Page</h1>
+    <div id="status">Loading...</div>
+
+    <script>
+        async function debugAuth() {
+            const statusEl = document.getElementById('status');
+
+            // Check localStorage
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('user');
+
+            statusEl.innerHTML = `
+                <h2>Authentication Debug</h2>
+                <p><strong>Token Present:</strong> ${!!token}</p>
+                <p><strong>User Data:</strong> ${user ? 'Present' : 'Missing'}</p>
+                ${user ? `<p><strong>User:</strong> <pre>${user}</pre></p>` : ''}
+
+                <h3>API Tests</h3>
+                <div id="api-tests">Testing...</div>
+            `;
+
+            const apiTestsEl = document.getElementById('api-tests');
+
+            // Test API connectivity
+            try {
+                const response = await fetch('http://localhost:5001/');
+                const text = await response.text();
+                apiTestsEl.innerHTML += `<p>✅ Backend: ${text}</p>`;
+
+                if (token) {
+                    // Test authenticated endpoint
+                    const authRes = await fetch('http://localhost:5001/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (authRes.ok) {
+                        const authData = await authRes.json();
+                        apiTestsEl.innerHTML += `<p>✅ Auth: ${authData.name} (${authData.role})</p>`;
+
+                        // Test dashboard endpoints
+                        const dashRes = await fetch('http://localhost:5001/api/leaves/summary', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (dashRes.ok) {
+                            apiTestsEl.innerHTML += `<p>✅ Dashboard API: Working</p>`;
+                        } else {
+                            apiTestsEl.innerHTML += `<p>❌ Dashboard API: ${dashRes.status}</p>`;
+                        }
+                    } else {
+                        apiTestsEl.innerHTML += `<p>❌ Auth: ${authRes.status}</p>`;
+                    }
+                }
+            } catch (error) {
+                apiTestsEl.innerHTML += `<p>❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        debugAuth();
+    </script>
+</body>
+</html>

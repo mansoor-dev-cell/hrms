@@ -40,6 +40,10 @@
                     <i class="ph ph-briefcase nav-icon"></i>
                     Leaves
                 </a>
+                <a href="salary.html" class="nav-item">
+                    <i class="ph ph-currency-dollar nav-icon"></i>
+                    Salary
+                </a>
             </nav>
         </aside>
 
@@ -302,11 +306,41 @@
                             <div class="card">
                                 <div class="card-body">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                                        <h3 style="font-size: 16px; font-weight: 600; margin: 0;">My Recent Leaves</h3>
-                                        <a href="leave.html" style="font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">View all &rarr;</a>
+                                        <h3 style="font-size: 16px; font-weight: 600; margin: 0;">My Leave Summary</h3>
+                                        <a href="leave.html" style="font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">Manage Leaves →</a>
                                     </div>
-                                    <div id="empLeavesList" style="display: flex; flex-wrap: wrap; gap: 12px;">
-                                        <p class="text-muted" style="font-size: 13px;">Loading...</p>
+
+                                    <!-- Enhanced Leave Balance -->
+                                    <div class="leave-balance-enhanced">
+                                        <h4>📏 Current Month Balance</h4>
+                                        <div id="empLeaveBalance">
+                                            <div class="leave-balance-row">
+                                                <span>Sick Leave:</span>
+                                                <span>Loading...</span>
+                                            </div>
+                                            <div class="leave-balance-row">
+                                                <span>Annual Leave:</span>
+                                                <span>Loading...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Recent Leaves -->
+                                    <div style="margin-top: 16px;">
+                                        <h4 style="font-size: 14px; margin-bottom: 12px; color: var(--text-main);">Recent Applications</h4>
+                                        <div id="empLeavesList" style="display: flex; flex-wrap: wrap; gap: 12px;">
+                                            <p class="text-muted" style="font-size: 13px;">Loading...</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Links -->
+                                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                                        <div id="empSalaryLink">
+                                            <a href="salary.html" style="color: var(--primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                                <i class="ph ph-currency-dollar"></i>
+                                                View Salary Details
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

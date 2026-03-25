@@ -27,6 +27,35 @@ const userSchema = new mongoose.Schema(
     sickLeaveQuota: { type: Number, min: 0, default: 0 },
     lopQuota: { type: Number, min: 0, default: 0 },
     lopDeductionPercent: { type: Number, min: 0, max: 100, default: 100 },
+
+    // Enhanced monthly leave tracking
+    monthlyLeaveAllocation: {
+      sickLeave: { type: Number, default: 1 },
+      annualLeave: { type: Number, default: 1 },
+    },
+    currentMonthLeaves: {
+      year: { type: Number, default: new Date().getFullYear() },
+      month: { type: Number, default: new Date().getMonth() + 1 },
+      sickLeave: { type: Number, default: 1 },
+      annualLeave: { type: Number, default: 1 },
+      carryForwardSick: { type: Number, default: 0 },
+      carryForwardAnnual: { type: Number, default: 0 },
+    },
+
+    // LOP and salary tracking
+    lopDetails: {
+      currentMonth: { type: Number, default: 0 },
+      yearToDate: { type: Number, default: 0 },
+      deductionAmount: { type: Number, default: 0 },
+    },
+    salaryComponents: {
+      basicSalary: { type: Number, default: 0 },
+      allowances: { type: Number, default: 0 },
+      deductions: { type: Number, default: 0 },
+      lopDeduction: { type: Number, default: 0 },
+      netSalary: { type: Number, default: 0 },
+    },
+
     joinDate: { type: Date, default: Date.now },
     status: {
       type: String,

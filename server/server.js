@@ -672,6 +672,331 @@ app.post(
   },
 );
 
+// ── Enhanced Leave Management ──────────────────────────────
+
+// Monthly Leave Allocation (Cron job simulation - to be called monthly)
+async function allocateMonthlyLeaves() {
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+
+  try {
+    const users = await User.find({ status: 'Active' });
+
+    for (const user of users) {
+      // Check if allocation already done for current month
+      if (user.currentMonthLeaves.year === currentYear &&
+          user.currentMonthLeaves.month === currentMonth) {
+        continue;
+      }
+
+      // Carry forward unused leaves from previous month (if not December to January)
+      let carryForwardSick = 0;
+      let carryForwardAnnual = 0;
+
+      if (currentMonth > 1 || (currentMonth === 1 && currentDate.getFullYear() > user.currentMonthLeaves.year)) {
+        // Don't carry forward from December to January (new year)
+        if (!(currentMonth === 1 && user.currentMonthLeaves.month === 12)) {
+          carryForwardSick = user.currentMonthLeaves.sickLeave;
+          carryForwardAnnual = user.currentMonthLeaves.annualLeave;
+        }
+      }
+
+      // Update monthly allocation
+      user.currentMonthLeaves = {
+        year: currentYear,
+        month: currentMonth,
+        sickLeave: user.monthlyLeaveAllocation.sickLeave + carryForwardSick,
+        annualLeave: user.monthlyLeaveAllocation.annualLeave + carryForwardAnnual,
+        carryForwardSick,
+        carryForwardAnnual
+      };
+
+      await user.save();
+    }
+
+    console.log(`✅ Monthly leave allocation completed for ${currentMonth}/${currentYear}`);
+  } catch (error) {
+    console.error('❌ Monthly leave allocation failed:', error);
+  }
+}
+
+// Calculate LOP for a user based on leave taken in current month
+async function calculateLOP(userId, month, year) {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return { error: 'User not found' };
+
+    // Get all approved leaves for the month
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
+
+    const approvedLeaves = await Leave.find({
+      employeeId: userId,
+      status: 'approved',
+      startDate: { $gte: monthStart, $lte: monthEnd }
+    });
+
+    let sickDaysUsed = 0;
+    let annualDaysUsed = 0;
+    let totalDaysInMonth = new Date(year, month, 0).getDate();
+
+    // Calculate total leave days used by type
+    for (const leave of approvedLeaves) {
+      const startDate = new Date(leave.startDate);
+      const endDate = new Date(leave.endDate);
+      const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+      if (leave.type === 'sick') {
+        sickDaysUsed += daysDiff;
+      } else if (leave.type === 'annual') {
+        annualDaysUsed += daysDiff;
+      }
+    }
+
+    // Calculate LOP
+    const availableSick = user.currentMonthLeaves.sickLeave;
+    const availableAnnual = user.currentMonthLeaves.annualLeave;
+
+    let lopDays = 0;
+
+    // Check sick leave overflow
+    if (sickDaysUsed > availableSick) {
+      lopDays += (sickDaysUsed - availableSick);
+    }
+
+    // Check annual leave overflow
+    if (annualDaysUsed > availableAnnual) {
+      lopDays += (annualDaysUsed - availableAnnual);
+    }
+
+    // Calculate LOP amount
+    const dailySalary = user.monthlySalary / totalDaysInMonth;
+    const lopAmount = lopDays * dailySalary * (user.lopDeductionPercent / 100);
+
+    // Update user LOP details
+    user.lopDetails.currentMonth = lopDays;
+    if (month === 1) {
+      user.lopDetails.yearToDate = lopDays; // Reset for new year
+    } else {
+      user.lopDetails.yearToDate += lopDays;
+    }
+    user.lopDetails.deductionAmount = lopAmount;
+
+    // Update salary components
+    user.salaryComponents.basicSalary = user.monthlySalary;
+    user.salaryComponents.lopDeduction = lopAmount;
+    user.salaryComponents.netSalary = user.monthlySalary - lopAmount - user.salaryComponents.deductions;
+
+    await user.save();
+
+    return {
+      lopDays,
+      lopAmount,
+      sickDaysUsed,
+      annualDaysUsed,
+      availableSick,
+      availableAnnual
+    };
+
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+// API: Trigger monthly leave allocation (Admin only)
+app.post("/api/leaves/allocate-monthly", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await allocateMonthlyLeaves();
+    res.json({ message: "Monthly leave allocation completed successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to allocate monthly leaves.", error: error.message });
+  }
+});
+
+// API: Get user's current month leave summary
+app.get("/api/leaves/summary", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user._id;
+
+    // Check if admin is requesting for another user
+    if (userId !== req.user._id.toString() && !isAdminRole(req.user)) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Calculate current month LOP
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    const lopCalculation = await calculateLOP(userId, currentMonth, currentYear);
+
+    res.json({
+      currentMonthLeaves: user.currentMonthLeaves,
+      lopDetails: user.lopDetails,
+      salaryComponents: user.salaryComponents,
+      lopCalculation: lopCalculation.error ? null : lopCalculation
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error.", error: error.message });
+  }
+});
+
+// API: Get detailed salary slip for user
+app.get("/api/salary/slip", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user._id;
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    // Check permissions
+    if (userId !== req.user._id.toString() && !isAdminRole(req.user)) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Get leave details for the month
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
+
+    const leaves = await Leave.find({
+      employeeId: userId,
+      status: 'approved',
+      $or: [
+        { startDate: { $gte: monthStart, $lte: monthEnd } },
+        { endDate: { $gte: monthStart, $lte: monthEnd } }
+      ]
+    });
+
+    const lopCalculation = await calculateLOP(userId, month, year);
+
+    const salarySlip = {
+      employee: {
+        name: user.name,
+        email: user.email,
+        department: user.department,
+        subDepartment: user.subDepartment
+      },
+      period: {
+        month,
+        year,
+        daysInMonth: new Date(year, month, 0).getDate()
+      },
+      salary: {
+        basicSalary: user.monthlySalary,
+        allowances: user.salaryComponents.allowances || 0,
+        grossSalary: user.monthlySalary + (user.salaryComponents.allowances || 0)
+      },
+      deductions: {
+        standardDeductions: user.salaryComponents.deductions || 0,
+        lopDeduction: lopCalculation.lopAmount || 0,
+        totalDeductions: (user.salaryComponents.deductions || 0) + (lopCalculation.lopAmount || 0)
+      },
+      leaves: {
+        sickLeaveUsed: lopCalculation.sickDaysUsed || 0,
+        annualLeaveUsed: lopCalculation.annualDaysUsed || 0,
+        lopDays: lopCalculation.lopDays || 0,
+        availableSick: lopCalculation.availableSick || 0,
+        availableAnnual: lopCalculation.availableAnnual || 0
+      },
+      netSalary: user.monthlySalary + (user.salaryComponents.allowances || 0) -
+                 ((user.salaryComponents.deductions || 0) + (lopCalculation.lopAmount || 0)),
+      leaveDetails: leaves
+    };
+
+    res.json(salarySlip);
+  } catch (error) {
+    res.status(500).json({ message: "Server error.", error: error.message });
+  }
+});
+
+// API: Update user salary components (Admin only)
+app.post("/api/salary/update", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, basicSalary, allowances, deductions, lopDeductionPercent } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required." });
+    }
+
+    const updateData = {};
+    if (basicSalary !== undefined) {
+      updateData.monthlySalary = Number(basicSalary);
+      updateData['salaryComponents.basicSalary'] = Number(basicSalary);
+    }
+    if (allowances !== undefined) {
+      updateData['salaryComponents.allowances'] = Number(allowances);
+    }
+    if (deductions !== undefined) {
+      updateData['salaryComponents.deductions'] = Number(deductions);
+    }
+    if (lopDeductionPercent !== undefined) {
+      updateData.lopDeductionPercent = Number(lopDeductionPercent);
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updateData, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    res.json({ message: "Salary components updated successfully.", user: user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error.", error: error.message });
+  }
+});
+
+// API: Get calendar data with LOP marking
+app.get("/api/calendar", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user._id;
+    const month = parseInt(req.query.month) || new Date().getMonth() + 1;
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+
+    // Check permissions
+    if (userId !== req.user._id.toString() && !isAdminRole(req.user)) {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    // Get all leaves for the month
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+    const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
+
+    const leaves = await Leave.find({
+      employeeId: userId,
+      $or: [
+        { startDate: { $gte: monthStart, $lte: monthEnd } },
+        { endDate: { $gte: monthStart, $lte: monthEnd } }
+      ]
+    });
+
+    const lopCalculation = await calculateLOP(userId, month, year);
+
+    // Build calendar data
+    const calendarData = {
+      month,
+      year,
+      leaves: leaves,
+      lopInfo: {
+        lopDays: lopCalculation.lopDays || 0,
+        lopAmount: lopCalculation.lopAmount || 0,
+        dailySalary: user.monthlySalary / new Date(year, month, 0).getDate()
+      },
+      leaveBalance: {
+        sickLeave: (lopCalculation.availableSick || 0) - (lopCalculation.sickDaysUsed || 0),
+        annualLeave: (lopCalculation.availableAnnual || 0) - (lopCalculation.annualDaysUsed || 0)
+      }
+    };
+
+    res.json(calendarData);
+  } catch (error) {
+    res.status(500).json({ message: "Server error.", error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

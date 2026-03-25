@@ -595,3 +595,984 @@ body.role-employee .admin-only {
         gap: 16px;
     }
 }
+
+/* ===== SALARY PAGE STYLES ===== */
+
+/* Filter Section */
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.month-year-selector {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.form-select {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    color: var(--text-main);
+    font-size: 14px;
+    line-height: 1.5;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.employee-selector select {
+    min-width: 180px;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-rad
+/* ===== SALARY PAGE STYLES ===== */
+
+/* Filter Section */
+.filtelig
+/* Filter Section */
+.filter-secti tr.filter-section {
+ ea    display: fln:     align-items: rf    gap: 16px;
+    flexar    flex-wrap  }
+
+.month-year-seleositi    display: flex;
+  :     gap: 8px;
+         align-it
+ }
+
+.form-select {
+    pckgro    padding: im    border: 1px solid       border-radius: var(--radius-sm)
+.    background: var(--bg-surface);
+ v    color: var(--text-main);
+    ns    font-size: 14px;
+    li:     line-height: 1.0,    transition: all ar    min-width: 120px;
+}
+
+.for: }
+
+.form-select:focu   wi    outline: none;
+ht    border-color:ro    box-shadow: 0 0 0 3px var(--or}
+
+.employee-selector select {
+    min-width: x;
+      min-width: 180px;
+}
+
+/ j}
+
+/* Stats Grid */
+er;
+ .stats-grid {
+ 4p    display::     grid-template      gap: 20px;
+    margin-bottom: 32px;
+}
+
+.stat-card {
+    bac f    margin-bo00}
+
+.stat-card {
+    bac;
+       backgro(-    border: 1px solid var(--borde
+     border-rad
+/* ===== SALARY PAGE--/* ===== SALA  
+/* Filter Section */
+.filtelig
+/* }
+
+.filtelig
+/* Filter*//* Filtet-.filter-secti tr.fin- ea    display: fln:     align-i {    flexar    flex-wrap  }
+
+.month-year-seleositi     f
+.month-year-seleositi   wei  :     gap: 8px;
+         align-it
+ }
+          align-i   }
+
+.form-select  
+ali    pckgro   te.    background: var(--bg-surface);
+ v    color: var(--text-main);
+    ns    font-s   v    color: var(--text-main);
+   (-    ns    font-size: 14px;
+   2    li:     line-height: ta}
+
+.for: }
+
+.form-select:focu   wi    outline: none;
+ht    border-color bord
+.formx sht    border-color:ro    box-shadow: 0 va
+.employee-selector select {
+    min-width: x;
+      mi 2p    min-width: x;
+      mi
+}      min-width:ec}
+
+/ j}
+
+/* Stats Gridpx;
+ 
+/*borer;
+ .stats-gri s .id 4p    displa);    margin-bottom: 32px;
+}
+
+.stat-card {
+    bac la}
+
+.stat-card {
+    bacottom    bac f  .s
+.stat-card {
+    bac;
+        bac;
+   1              border-rad
+/* ===== SALARY PAGE--/* ===== S  /* ===== SALAR6p/* Filter Section */
+.filtelig
+/* }
+rd.filtelig
+/* }
+
+.fid /* }
+
+.frd
+.f;
+ /* Filteay
+.month-year-seleositi     f
+.month-year-seleositi   wei  :     gap: 8px;
+         align-it
+ }
+         .month-year-seleositi   we12         align-it
+ }
+          align-i   }
+de }
+          ali   fl
+.form-select  
+ali Empali    pcails * v    color: var(--text-main);
+    ns    font-s   v mp    ns    font-s   v    color,    (-    ns    font-size: 14px;
+   2    li:    ro   2    li:     line-height: tti
+.for: }
+
+.form-select:focu   wali
+.formms:ht    border-color bord
+.formx sht    bck.formx sht    border-cte.employee-selector select {
+    min-width: x;
+  de    min-width: x;
+      mi;
+      mi 2p    mla      mi
+}      min-width:e
+ }      r:
+/ j}
+
+/* Stats Gri
+  
+/*ont 
+/*borer;
+ .st
+.de .statsw }
+
+.stat-card {
+    bac la}
+
+.stat-card {
+    bacottom 600;
+    bac la}ze
+.stat-car
+/*    bacottoak.stat-card {
+    bac;
+  n,    bac;
+  ma            1       ex/* ===== SALARY PAGE--/* ==n;.filtelig
+/* }
+rd.filtelig
+/* }
+
+.fid /* }
+
+.frd
+.f;
+ /* Filteay
+.mon j/* }
+rd.onrd.t:/* }
+
+.fidwe
+.f
+  
+.frd
+.fite.f; c /te.month-yeadi.month-year-seleositi   weun         align-it
+ }
+         .month-year-var }
+         .mon   ma }
+          align-i   }
+de }
+          ali   fl
+.forbr akde }
+          ali  ve   w:.form-select  
+alroali Empali   -m    ns    font-s   v mp    ns    font-s   v    colo-r   2    li:    ro   2    li:     line-height: tti
+.for: }
+
+.form-select:focu   wali
+-w.for: }
+
+.form-select:focu   wali
+.formms:ht     8
+.form  b.formms:ht    border-copr.formx sht    bck.formx sht   de    min-width: x;
+  de    min-width: x;
+      mi;
+      mi 2p    ml-w  de    min-widtde      mi;
+      mi ar(      mig)}      min-width:e
+ }    ig }      r:
+/ j}
+
+nd/ j}
+
+/* 1,
+/*1,   
+/*ont 
+/  /co/*borva .st
+.dni.de;
+
+.stat-card ght    bac la}bo
+.stat-car 4p    bacotto(-    bac la}ze
+.sre.stat-car
+/*la/*    baav    bac;
+  n,    bac;
+  maig  n,   ;
+  ma       ze/* }
+rd.filtelig
+/* }
+
+.fid /* }
+
+.frd
+.f;
+ /* Filteay
+.mon j/*onrd.iz/* }
+
+.fid
+
+
+.fave
+.frd
+.flue.f;   /fo.mon j/* } 6rd.onrd.ton
+.fidwe
+.f
+  
+}
+.f
+  et Pa. S.fiio }
+         .month-year-var }
+         .mon   ma }
+          align-i  5d g,         .mon   ma }
+    co          align-i  : de }
+          ali  :    te.forbr akde }
+   re          alsaalroali Empali   -m    ns    font-s
+ .for: }
+
+.form-select:focu   wali
+-w.for: }
+
+.form-select:focu   wali
+.formms:ht     8
+.form  b.formms:ht    border-coprim
+.formg+x-w.for: }
+
+.form-selectig
+.form-svie.formms:ht     8
+.form 'h.form  b.formmsg/  de    min-width: x;
+      mi;
+      mi 2p    ml-w  de    min-widtde      mi;
+  ci      mi;
+      mi 2d=      mi6.      mi ar(      mig)}      min-width:e
+ }  43 }    ig }      r:
+/ j}
+
+nd/ j}
+
+/* 1,
+20/ j}
+
+nd/ j}
+
+/* 54
+nd-20
+/* 10-8/*1,-2/*ont .9/  /c 2.dni.de;
+
+.stat-3E
+.stat-E%3.stat-car 4p    bacotto(- ci.sre.stat-car
+/*la/*    baav    bac;
+
+./*la/*    bant  n,    bac;
+  maig  
+   maig  n, co  ma       ze;
+rd.filtelig
+/* } c/* }
+
+.fid g
+.f 20
+.frd
+.ffon.f;iz : 2.mon j/*onon
+.fid
+
+
+.fave
+.frd co
+
+.: va.frdte.flin.fidwe
+.f
+  
+}
+.f
+  et Pa. S.fiio }
+z-.f
+  :  ;
+}
+
+.n t-         .month-l          .mon   ma }
+    
+.          align-i oun    co          align-i  : de }
+          a 2          ali  :    te.forbr a/*   re          alsaalroali Empali {
+ .for: }
+
+.form-select:focu   wali
+-w.for: }
+
+.form-sli
+.form--bo-w.for: }
+
+.form-selects:
+.form-sadi.formms:ht     8
+.form id.form  b.formmsab.formg+x-w.for: }
+
+.form-selectig
+ol
+.form-selectig
+
+  .form-svie.fo14.form 'h.form  b.formmsg/        mi;
+      mi 2p    ml-w  de    min-widtar      mima  ci      mi;
+      mi 2d=      mi6.      mi 12      mi 2d=-a }  43 }    ig }      r:
+/ j}
+
+nd/ j}
+
+/* 1,
+20/ j}
+
+nd/ j}
+
+at/ j}
+
+nd/ j}
+
+/* 1,
+20/g:
+ndpx 
+/* 1
+  20/ rd
+nd/ tto
+/* 5x snd-2 v/* 1-b
+.stat-3E
+.stat-E%3.stat-car 4p    ;
+}.stat-E-t/*la/*    baav    bac;
+
+./*la/*    bant  n,    ba);
+./*la/*    bant  n, st-  maig  
+   maig  n, co  mom   maig
+}rd.filtelig
+/* } c/* }
+
+.fi: /* } c/* }  
+.fid g
+.r(-.f 20-m.frd);.ff  .fid
+
+
+.fave
+.frd co
+
+.: ad
+
+.g: 3.frd
+ 
+.: vakgr.f
+  
+}
+.f
+  et Pa. Sed ;
+}
+
+/* Stz-.f
+  :  ;
+}
+
+.st  :s-}
+
+.n {
+      
+.          align-i oun    co         px.              a 2          ali  :    te.forbr a/*   re  ns .for: }
+
+.form-select:focu   wali
+-w.for: }
+
+.form-sli
+.form--bo-w.for: }
+
+.fo}
+
+.form-s-b-w.for: }
+
+.form-sli
+.fkg
+.form-sar(.form--bs-
+.form-selects:
+.ar(.form-sadi.fo  .form id.form  b.formmsabes
+.form-selectig
+ol
+.form-selectig
+
+  .forrouol
+.form-selege.-b
+  .form-svie: v      mi 2p    ml-w  de    min-widtar      mima  ci ta      mi 2d=      mi6.      mi 12      mi 2d=-a }  43 }    co/ j}
+
+nd/ j}
+
+/* 1,
+20/ j}
+
+nd/ j}
+
+at/ j}
+
+nd/ j}
+
+/* 1,
+20/g:
+ndpx 
+tr
+nd */
+/* 1in-20/ ro
+nd/ id 
+at/  di
+nd/ : g
+/* 1   20/gd-ndpxla/* 1ol  2s:nd/ tto(a/* 5x t,.stat-3E
+.stat-E%3)).stat-Eap}.stat-E-t/*la/*    baav {
+
+./*la/*    bant  n,    ba);
+./e);./*la/*    bant  n, st-  m(-   maig  n, co  mom   maig
+}rdar}rd.filtelig
+/* } c/* }
+
+g:/* } c/* }
+po
+.fi: /* ela.fid g
+.r(-.f 20ow.rhidde
+
+.fave
+.frd co
+
+.: ad
+
+.re {.frd c
+.: ad: '
+.g:    
+.: vak: ab  
+}
+.f
+   }top: 0;}
+
+/* Stz-.f
+
+      :  ;
+}00}
+
+.s  hei
+.n {
+  ;
+    ba.    un
+.form-select:focu   wali
+-w.for: }
+
+.form-sli
+.form--bo-w.for: }
+
+.fo}
+
+.form-s-b-w.for: }
+
+.form-sli
+.f   -w.for: }
+
+.form-sli
+.fol
+.form-s--t.form--b);
+.fo}
+
+.form-s-b-16p
+.f;
+ 
+.form-sli
+.fkg
+.
+  .fkg
+.foit.fo: .form-selects:
+.ar(x;.ar(.form-sadca.form-selectig
+ol
+.form-selectig
+
+  .forrouoontol
+.form-sele}
+..c
+  .forrouol
+for.form-sele    .form-svie: m:
+nd/ j}
+
+/* 1,
+20/ j}
+
+nd/ j}
+
+at/ j}
+
+nd/ j}
+
+/* 1,
+20/g:
+ndpx 
+tr
+nd */
+/* 1in-20/ ro
+nd/ id 
+at/  di
+nd/ : g
+/* 1   20/gd-ndpxla/*: 8
+/* 1   font-w
+nd/ : 6
+at/    
+nd/ : v
+/* 1tex20/ginndpx  tr
+nt-niz/* 14pnd/ id 
+at/ olat/  dinnd/ : co/* 1  ca.stat-E%3)).stat-Eap}.stat-E-t/*la/*    baav {
+
+./*;
+   
+./*la/*    bant  n,    ba);
+./e);./*la/*    rad./e);./*la/*    bant  n, s b}rdar}rd.filtelig
+/* } c/* }
+
+g:/* } c/* }
+po
+.fi: /* ela.;
+/* } c/* }
+
+g:/*4p
+g:/* } canspo
+.fi: /* 0..s .r(-.f 20ow.rhidl-
+.fave
+.frd co
+
+.
+.c.frdol
+.: adsel
+.refoc.: ad: '
+.ut.g:    on.: vak b}
+.f
+   }to: va (-
+/* Stz-.f
+   
+      :dow}00}
+
+.s px
+.sr(-.n {
+ ry  ;gh  ;
+.form-selectnd-w.for: }
+
+.form-sli
+.f
+.
+.form-scar.form--b  
+.fo}
+
+.form-s-b--mu
+.f);
+
+.form-sli
+.f   -px;.f   margi
+.form-sli
+.fx;
+.fol
+.fo-h.foht.fo}
+
+.form-s-b-16p E
+.fnce.f;
+ 
+.form-n- 
+cces.fkg
+.
+ ba.
+ roun.foitne.ar(x;.ar(.form-sadca.f(-ol
+.form-selectig
+
+  .forrouoontolr(.-b
+  .forrouoonbor.form-sele}
+.. b..c
+  .for 0  pxfor.form-s52nd/ j}
+
+/* 1,
+20/ j}
+
+nd/ j}
+
+es
+/* 1er 20/   
+nd/ rou
+at/ ine
+nd/ adi
+/* 135d20/g#1ndpx1,tr
+n96n9)/* 1  nd/ id 
+at/ 0 at/  dpxnd/ : 52/* 1   1/* 1   font-w
+nd/ : 6
+a: nd/ : 6
+at/ 1pat/   
+.nd/ : im/* 1te  nt-niz/* 14pnd/ id 
+-gat/ olat/  dig, var(
+./*;
+   
+./*la/*    bant  n,    ba);
+./e);./*la/*    rad./e);./*la/*    bargb   2,./3,./e);./*la/*    rad./e);./y:/* } c/* }
+
+g:/* } c/* }
+po
+.fi: /* ela.;
+/* } c/* }
+
+g:/*4p
+g:),
+g:/* } cimapo
+.fi: /* 
+ .  /* } c/* }
+
+0 
+g:/*4p
+grgbg:/*  5.fi: /* 0..s;
+.fave
+.frd co
+
+.
+.c.frdol
+.: a);.frd/*
+.
+.c.r Con.: adse/
+.refoc.-c.ut.g:    on. d.f
+   }to: va (-
+/* ig -i/* Stz-.f
+  ;
+   
+     2  x;
+.s px
+.sr(-.p: .sr(;
+ ry  ;ghsp.form-seleig
+.form-sli
+.f
+.
+.form-: 7.f
+.
+.fo  . .st.fo}
+
+.form-s-b--mugr
+.ftem.f);
+
+.form-s:
+.fr;
+.f   -px  .form-sli
+.fx;
+.fols.fx;
+.fo  .fo  .foid
+.form-s-b-16umn.fnce.f;
+ 
+.fo   
+.form.empcces.fkgta.
+ ba.
+     rogr.form-selectig
+
+  .forrouoontolr(.-b
+   
+  .forrouoonow,  .forrouoonbor.for  .. b..c
+  .for 0  pxfor.fx-  .forio
+/* 1,
+20/ j}
+
+nd/ j}
+
+es
+/* s: 20/ -s
+nd/ 
+  
+es
+/ ga/: nd/ rou
+at/  tat/-alignd/ adt;/* 135
+ n96n9)/* 1  nd/ id 
+unat/ 0 at/  dpxnd/ irnd/ : 6
+a: nd/ : 6
+at/ 1pat/   
+.nd/ : im/  a: nd/heat/ 1pat/ro.nd/ : im/*  -gat/ olat/  dig, var(
+./*;
+   
+./*gn./*;
+   
+./*la/*    b     ap./12./e);./*la/*    rad./e);./-s
+g:/* } c/* }
+po
+.fi: /* ela.;
+/* } c/* }
+
+g:/*4p
+g:),
+g:/* } cimapo
+.fi: /* 
+ .  /* }px;po
+.fi: /* 
+ .  /* } c/* }
+
+se
+g:/*4p
+g   g:),
+flg:/di.fi: /* 
+ . um .  /*   
+0 
+g:/*4p
+gr   g
+ grgbg  .fave
+.frd co
+
+.
+.c.frd m.frdid
+.
+.c.to;
+ .: a);.
+@.
+.c.r Con.widt.refoc.-c.ut.g: .   }to: va (-
+/* ig -i/* di/* ig -i/* Sum  ;
+   
+     2  al  n:  en.s px
+.sr  .sr(p: ry  ;ghsp.fo  .form-sli
+.f
+.
+.form-ec.f
+.
+.fo  .    .
+.fo  . .6px;
+.form-s-b--    .ftem.f);
+
+.fo{
+
+.form-spad.fr;
+.f6p.f   .fx;
+.fols.fx;
+.fo-t.foe .fo  .fo  .form-s-b-16umx; 
+.fo   
+.form.empccestabl.form
+  ba.
+     rogr.form
+      
+  .forrouoontolr(.-b
+  }   
+  .forrouoonow, *  @m  .for 0  pxfor.fx-  .forio
+/* 1,
+20/ j}
+
+,
+/* 1,
+20/ j}
+
+nd/ j}
+
+es
+
+  20/ ea
+nd/ ont
+es
+/
+  / .nd/ 
+  
+es
+ec  
+n-eea/erat/  tat/-alisp n96n9)/* 1  nd/ id 
+unat/ 
+ unat/ 0 at/  dpxnd/nta: nd/ : 6
+at/ 1pat/   
+.nd/  at/ 1pat/in.nd/ : im/ 
+ ./*;
+   
+./*gn./*;
+   
+./*la/*    b     ap./12./e);./*la/*    rad       ./ox   
+./*l n./e;g:/* } c/* }
+po
+.fi: /* ela.;
+/* } c/* }
+
+g:/*4p
+gorpo
+.fi: /* po.ta/* } c/* }
+
+  
+g:/*4p
+garyg:),
+-sg:/io.fi: /* 
+ .    .  /* ac.fi: /* 
+ . f0 .  /* or
+se
+g:/*4p
+g  cogorg   gckflg:/dita . um .  /*   
+ 0 
+g:/*4p
+gr mogntgr      grgbol.frd co
+
+.
+.mp
+.
+.c.;
+   .
+.c.to;
+ .: ing  .: as @.
+.c.rdi.g /* ig -i/* di/* ig -i/* Sum  ;
+   
+     2 ne   
+     2  al  n:  en.s px
+..l  di.sr  .sr(p: ry  ;ghsp.t:.f
+.
+.form-ec.f
+.
+.fo  .    .
+.fo op. 50%.
+.fo  . t: 5.fo  . .6pdt.form-s-b--  
+.fo{
+
+.form-spad.fr;
+.n: 
+.fpx .f6p.f   .fx;  .fols.fx;
+.fso.fo-t.fo--.fo   
+.form.empccestabl.form
+  ba.
+-p.formy)  ba.
+     rogr.form
+50            
+  .f spi  .foli  }   
+  .forrouoonke  .foes/* 1,
+20/ j}
+
+,
+/* 1,
+20/ j}
+
+nd/ j}
+
+es
+
+  20/eg20/   
+,
+/
+
+/* E20/ ce
+nd/ ve 
+es
+
+ce 
+ispnd/ ont Des
+/
+ rd/*/
+.  
+es
+eclanceeenn-eceunat/ 
+ unat/ 0 at/  dpxnd/nta: nd/ : 6
+at b unat: at/ 1pat/   
+.nd/  at/ 1pat/in.rd.nd/  at/ 1va ./*;
+   
+./*gn./*;
+   
+./*:    
+;
+./     
+./*lot./m:./*l n./e;g:/* } c/* }
+po
+.fi: /* ela.;
+/* } c/* }
+
+g:/12po
+.fi: /* ela.;
+/* }14.x;/* } c/* }
+
+va
+g:/*4p
+-maigorpo  .fi:t-
+  
+g:/*4p
+garyg:),
+-say:gflgaryg  -sg:/ioit .    .  /* ac   . f0 .  /* or
+se
+g:/base
+g:/*4p
+g  d g4:g  core 0 
+g:/*4p
+gr mogntgr      grgbolsize: g:pxgr mo.l
+.
+.mp
+.
+.c.;
+   .
+.c.to;
+ .ay: f.
+x;
+    ju.c.fy .: ien.c.rdi.g /* ig -;
+   
+     2 ne   
+     2  al  n:  en.s tt  :      2  al dd..l  di.sr  .sr(p: ry -b.
+.form-ec.f
+.
+.fo  .    .
+.fo o}
+
+..
+.fo  . ance.fo op. 50ch.fo  . t: 5ar.fo{
+
+.form-spad.fr;
+.n: 
+.fpx .f6pon
+.f}
+
+.n: 
+.fpx .f6e-.fp.l.fso.fo-t.fo--.fo   
+.form.e--.form.empccestabl.fwe  ba.
+-p.formy)  ba.
+ou-p.frg     rogr.for3650           ad  .f spi  .fox;  .forrouoonke  .foeva20/ j}
+
+,
+/* 1,
+20/ j}
+
+nr:
+,
+/ solid20/ (-
+nd/ ing
+es
+
+  m
+rgi,
+/
+
+/* E20/}
+

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salary Details - SOPHIA-ACADEMY HR</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body class="role-pending">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="images/logo.jpeg" alt="Sophia Academy"
+                    style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; margin-right: 5px;">
+                <div class="logo-text">SOPHIA-ACADEMY HR</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="ph ph-squares-four nav-icon"></i>
+                    Dashboard
+                </a>
+                <a href="emp.html" class="nav-item admin-only">
+                    <i class="ph ph-users nav-icon"></i>
+                    Employees
+                </a>
+                <a href="attendance.html" class="nav-item admin-only">
+                    <i class="ph ph-calendar-check nav-icon"></i>
+                    Attendance
+                </a>
+                <a href="leave.html" class="nav-item">
+                    <i class="ph ph-briefcase nav-icon"></i>
+                    Leaves
+                </a>
+                <a href="salary.html" class="nav-item active">
+                    <i class="ph ph-currency-dollar nav-icon"></i>
+                    Salary
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <!-- Header -->
+            <header class="top-header">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <div class="header-right">
+                    <div class="user-profile">
+                        <div class="avatar">U</div>
+                        <div class="user-info">
+                            <div class="name">User</div>
+                            <div class="dept">Department</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <div class="page-header">
+                    <h1>💰 Salary Details</h1>
+                    <div class="header-controls">
+                        <div class="filter-section">
+                            <div class="month-year-selector">
+                                <select id="monthFilter" class="form-select">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                                <select id="yearFilter" class="form-select">
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+
+                            <!-- Admin-only employee selector -->
+                            <div class="employee-selector admin-only">
+                                <select id="employeeFilter" class="form-select">
+                                    <option value="">Select Employee</option>
+                                </select>
+                            </div>
+                            <i class="ph ph-download"></i>
+                            Generate Slip
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Salary Summary Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="ph ph-wallet"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="grossSalary">₹0</h3>
+                            <p>Gross Salary</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="ph ph-minus-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="totalDeductions">₹0</h3>
+                            <p>Total Deductions</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="ph ph-hand-coins"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="netSalary">₹0</h3>
+                            <p>Net Salary</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="ph ph-warning-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="lopDeduction">₹0</h3>
+                            <p>LOP Deduction</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Salary Slip Details -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>Detailed Salary Slip</h2>
+                    </div>
+
+                    <div class="salary-slip-container">
+                        <!-- Employee Details -->
+                        <div class="salary-slip-section">
+                            <h3>Employee Details</h3>
+                            <div class="employee-details">
+                                <div class="detail-row">
+                                    <span class="label">Name:</span>
+                                    <span class="value" id="empName">-</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Email:</span>
+                                    <span class="value" id="empEmail">-</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Department:</span>
+                                    <span class="value" id="empDepartment">-</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Sub-Department:</span>
+                                    <span class="value" id="empSubDepartment">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Earnings -->
+                        <div class="salary-slip-section">
+                            <h3>Earnings</h3>
+                            <div class="salary-breakdown">
+                                <div class="breakdown-row">
+                                    <span class="label">Basic Salary</span>
+                                    <span class="amount" id="basicSalaryAmount">₹0</span>
+                                </div>
+                                <div class="breakdown-row">
+                                    <span class="label">Allowances</span>
+                                    <span class="amount" id="allowancesAmount">₹0</span>
+                                </div>
+                                <div class="breakdown-row total">
+                                    <span class="label">Gross Earnings</span>
+                                    <span class="amount" id="grossEarnings">₹0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deductions -->
+                        <div class="salary-slip-section">
+                            <h3>Deductions</h3>
+                            <div class="salary-breakdown">
+                                <div class="breakdown-row">
+                                    <span class="label">Standard Deductions</span>
+                                    <span class="amount" id="standardDeductionsAmount">₹0</span>
+                                </div>
+                                <div class="breakdown-row lop-deduction">
+                                    <span class="label">LOP Deduction (<span id="lopDaysCount">0</span> days)</span>
+                                    <span class="amount" id="lopDeductionAmount">₹0</span>
+                                </div>
+                                <div class="breakdown-row total">
+                                    <span class="label">Total Deductions</span>
+                                    <span class="amount" id="totalDeductionsAmount">₹0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leave Summary -->
+                        <div class="salary-slip-section">
+                            <h3>Leave Summary</h3>
+                            <div class="leave-summary">
+                                <div class="leave-row">
+                                    <span class="label">Sick Leave Used</span>
+                                    <span class="value"><span id="sickLeaveUsed">0</span> / <span id="sickLeaveAvailable">0</span></span>
+                                </div>
+                                <div class="leave-row">
+                                    <span class="label">Annual Leave Used</span>
+                                    <span class="value"><span id="annualLeaveUsed">0</span> / <span id="annualLeaveAvailable">0</span></span>
+                                </div>
+                                <div class="leave-row lop-highlight">
+                                    <span class="label">LOP Days</span>
+                                    <span class="value" id="lopDaysValue">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Net Pay -->
+                        <div class="salary-slip-section net-pay">
+                            <div class="net-pay-amount">
+                                <span class="label">Net Pay</span>
+                                <span class="amount" id="finalNetSalary">₹0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Leave Details Table -->
+                    <div class="section-header">
+                        <h2>Leave Details for Selected Period</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date Range</th>
+                                    <th>Type</th>
+                                    <th>Days</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaveDetailsTable">
+                                <tr>
+                                    <td colspan="5" class="no-data">No leave records found for selected period</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Admin Controls -->
+                <div class="content-section admin-only">
+                    <div class="section-header">
+                        <h2>Admin Controls</h2>
+                    </div>
+
+                    <div class="admin-controls-grid">
+                        <div class="control-card">
+                            <h3>Update Salary Components</h3>
+                            <form id="salaryUpdateForm">
+                                <div class="form-group">
+                                    <label for="updateUserId">Employee</label>
+                                    <select id="updateUserId" required>
+                                        <option value="">Select Employee</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="updateBasicSalary">Basic Salary (₹)</label>
+                                    <input type="number" id="updateBasicSalary" min="0" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="updateAllowances">Allowances (₹)</label>
+                                    <input type="number" id="updateAllowances" min="0" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="updateDeductions">Deductions (₹)</label>
+                                    <input type="number" id="updateDeductions" min="0" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label for="updateLopPercent">LOP Deduction %</label>
+                                    <input type="number" id="updateLopPercent" min="0" max="100" step="1">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Salary</button>
+                            </form>
+                        </div>
+
+                        <div class="control-card">
+                            <h3>Monthly Leave Allocation</h3>
+                            <p>Allocate monthly leaves to all active employees and carry forward unused leaves.</p>
+                            <button class="btn btn-success" onclick="allocateMonthlyLeaves()">
+                                <i class="ph ph-calendar-plus"></i>
+                                Allocate Monthly Leaves
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

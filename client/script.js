@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (token && isAuthPage) {
         // Logged in but trying to access login/signup
-        window.location.href = '../client/dashboard.html';
+        window.location.href = '../dashboard.html';
         return;
     }
 
@@ -230,7 +230,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (token && !isAuthPage) {
-      fetchCurrentUser(token);
+        const userData = getStoredUser();
+        if (userData) {
+            updateProfileDOM(userData);
+            applyRoleBasedAccess(userData);
+
+            // Initialize page content immediately
+            if (page === 'dashboard.html' || page === 'index.html' || page === '') {
+                if (isAdminRole(userData)) {
+                    fetchDashboardData();
+                } else {
+                    fetchEmployeeDashboardData();
+                }
+            }
+        }
+        // Then fetch fresh user data
+        fetchCurrentUser(token);
     }
 });
 
@@ -437,6 +452,113 @@ function toDateKey(value) {
   return `${year}-${month}-${day}`;
 }
 
+// Calendar initialization for employee dashboard
+function initializeEmployeeCalendar(year, month, attendanceMap, myLeaves) {
+    const calendarGrid = document.getElementById('empCalendarGrid');
+    if (!calendarGrid) return;
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+    // Update month label
+    const monthLabel = document.getElementById('calMonthLabel');
+    if (monthLabel) {
+        monthLabel.textContent = new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+
+    let calendarHTML = '';
+
+    // Days of the week headers
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdays.forEach(day => {
+        calendarHTML += `<div style="font-size:12px;font-weight:700;padding:8px 4px;color:var(--text-muted);text-align:center;">${day}</div>`;
+    });
+
+    // Empty cells for days before the first day of the month
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        calendarHTML += '<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bg-muted);border-radius:8px;"></div>';
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateKey = toDateKey(date);
+        const isToday = date.toDateString() === new Date().toDateString();
+
+        let dayStyle = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;';
+        let dayContent = day;
+        let bgColor = 'var(--bg)';
+
+        // Check attendance status
+        const attendanceStatus = attendanceMap[dateKey];
+        if (attendanceStatus) {
+            switch (attendanceStatus) {
+                case 'present':
+                case 'late':
+                    bgColor = 'var(--success)';
+                    dayStyle += 'color:white;';
+                    break;
+                case 'absent':
+                    bgColor = 'rgba(239,68,68,0.3)';
+                    dayStyle += 'color:var(--danger);';
+                    break;
+                case 'half-day':
+                    bgColor = 'rgba(79, 70, 229, 0.18)';
+                    dayStyle += 'border:1.5px dashed var(--primary);color:var(--primary);';
+                    break;
+                case 'leave-approved':
+                    bgColor = 'var(--warning)';
+                    dayStyle += 'color:white;';
+                    break;
+                case 'leave-pending':
+                    bgColor = 'rgba(245, 158, 11, 0.18)';
+                    dayStyle += 'border:1.5px dashed var(--warning);color:var(--warning);';
+                    break;
+            }
+        }
+
+        if (isToday) {
+            dayStyle += 'box-shadow: 0 0 0 2px var(--primary);';
+        }
+
+        if (date.getDay() === 0) {
+            bgColor = 'var(--border)';
+            dayStyle += 'color:var(--text-muted);';
+        }
+
+        dayStyle += `background:${bgColor};`;
+
+        calendarHTML += `<div style="${dayStyle}" data-date="${dateKey}">${dayContent}</div>`;
+    }
+
+    calendarGrid.innerHTML = calendarHTML;
+
+    // Add click handlers for calendar navigation if they don't exist
+    const prevBtn = document.getElementById('calPrevMonth');
+    const nextBtn = document.getElementById('calNextMonth');
+
+    if (prevBtn && !prevBtn.hasAttribute('data-handler-added')) {
+        prevBtn.addEventListener('click', () => {
+            const newMonth = month === 0 ? 11 : month - 1;
+            const newYear = month === 0 ? year - 1 : year;
+            // Refresh dashboard with new month
+            fetchEmployeeDashboardData();
+        });
+        prevBtn.setAttribute('data-handler-added', 'true');
+    }
+
+    if (nextBtn && !nextBtn.hasAttribute('data-handler-added')) {
+        nextBtn.addEventListener('click', () => {
+            const newMonth = month === 11 ? 0 : month + 1;
+            const newYear = month === 11 ? year + 1 : year;
+            // Refresh dashboard with new month
+            fetchEmployeeDashboardData();
+        });
+        nextBtn.setAttribute('data-handler-added', 'true');
+    }
 function getTodayDateKey() {
   return toDateKey(new Date());
 }
@@ -1434,6 +1556,8 @@ async function updateLeaveStatus(leaveId, newStatus) {
 }
 
 // --- Employee Dashboard Logic ─────────────────────────────────────────────────
+// ✨ This function has been moved to enhanced version at end of file
+/* ORIGINAL EMPLOYEE DASHBOARD FUNCTION - DISABLED
 async function fetchEmployeeDashboardData() {
   const user = getStoredUser();
     if (!user) return;
@@ -1851,6 +1975,7 @@ async function fetchEmployeeDashboardData() {
         console.error('Employee dashboard error:', err);
     }
 }
+*/ // END ORIGINAL FUNCTION - USE ENHANCED VERSION INSTEAD
 
 // ── Quick Leave Modal (employee dashboard) ─────────────────────────────────────
 function openQuickLeaveModal(datesSet) {
@@ -2462,4 +2587,593 @@ function setupSalaryAssignmentPanel() {
   refreshSalarySubDeptOptions();
   toggleSalaryScopeFields();
   populateSalaryUserDropdown();
+}
+
+// ── Enhanced Leave Management & Salary Features ─────────────────────────────
+
+// Initialize salary page functionality
+if (page === 'salary.html') {
+    initSalaryPage();
+}
+
+async function initSalaryPage() {
+    const currentDate = new Date();
+
+    // Set current month and year as defaults
+    const monthFilter = document.getElementById('monthFilter');
+    const yearFilter = document.getElementById('yearFilter');
+    if (monthFilter) monthFilter.value = currentDate.getMonth() + 1;
+    if (yearFilter) yearFilter.value = currentDate.getFullYear();
+
+    // Populate employee dropdown for admin
+    populateEmployeeDropdown('employeeFilter');
+    populateEmployeeDropdown('updateUserId');
+
+    // Add event listeners
+    if (monthFilter) monthFilter.addEventListener('change', loadSalaryData);
+    if (yearFilter) yearFilter.addEventListener('change', loadSalaryData);
+
+    const employeeFilter = document.getElementById('employeeFilter');
+    if (employeeFilter) employeeFilter.addEventListener('change', loadSalaryData);
+
+    const salaryUpdateForm = document.getElementById('salaryUpdateForm');
+    if (salaryUpdateForm) salaryUpdateForm.addEventListener('submit', handleSalaryUpdate);
+
+    // Load initial data
+    loadSalaryData();
+}
+
+async function loadSalaryData() {
+    const monthFilter = document.getElementById('monthFilter');
+    const yearFilter = document.getElementById('yearFilter');
+    const employeeFilter = document.getElementById('employeeFilter');
+
+    const month = monthFilter ? monthFilter.value : new Date().getMonth() + 1;
+    const year = yearFilter ? yearFilter.value : new Date().getFullYear();
+    const userId = employeeFilter ? employeeFilter.value : '';
+
+    try {
+        const user = getStoredUser();
+        const isAdmin = isAdminRole(user);
+        const targetUserId = isAdmin && userId ? userId : user.id;
+
+        // Fetch salary slip data
+        const response = await apiFetch(`/api/salary/slip?userId=${targetUserId}&month=${month}&year=${year}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch salary data');
+        }
+
+        const salaryData = await response.json();
+        displaySalaryData(salaryData);
+
+        // Fetch leave summary
+        const leaveResponse = await apiFetch(`/api/leaves/summary?userId=${targetUserId}`);
+        if (leaveResponse.ok) {
+            const leaveData = await leaveResponse.json();
+            displayLeaveSummary(leaveData);
+        }
+
+    } catch (error) {
+        console.error('Error loading salary data:', error);
+        showNotification('error', 'Failed to load salary data: ' + error.message);
+    }
+}
+
+function displaySalaryData(data) {
+    // Update summary cards
+    document.getElementById('grossSalary').textContent = `₹${data.salary.grossSalary.toLocaleString()}`;
+    document.getElementById('totalDeductions').textContent = `₹${data.deductions.totalDeductions.toLocaleString()}`;
+    document.getElementById('netSalary').textContent = `₹${data.netSalary.toLocaleString()}`;
+    document.getElementById('lopDeduction').textContent = `₹${data.deductions.lopDeduction.toLocaleString()}`;
+
+    // Update employee details
+    document.getElementById('empName').textContent = data.employee.name;
+    document.getElementById('empEmail').textContent = data.employee.email;
+    document.getElementById('empDepartment').textContent = data.employee.department;
+    document.getElementById('empSubDepartment').textContent = data.employee.subDepartment;
+
+    // Update salary breakdown
+    document.getElementById('basicSalaryAmount').textContent = `₹${data.salary.basicSalary.toLocaleString()}`;
+    document.getElementById('allowancesAmount').textContent = `₹${data.salary.allowances.toLocaleString()}`;
+    document.getElementById('grossEarnings').textContent = `₹${data.salary.grossSalary.toLocaleString()}`;
+    document.getElementById('standardDeductionsAmount').textContent = `₹${data.deductions.standardDeductions.toLocaleString()}`;
+    document.getElementById('lopDeductionAmount').textContent = `₹${data.deductions.lopDeduction.toLocaleString()}`;
+    document.getElementById('totalDeductionsAmount').textContent = `₹${data.deductions.totalDeductions.toLocaleString()}`;
+    document.getElementById('finalNetSalary').textContent = `₹${data.netSalary.toLocaleString()}`;
+
+    // Update leave summary
+    document.getElementById('sickLeaveUsed').textContent = data.leaves.sickLeaveUsed;
+    document.getElementById('sickLeaveAvailable').textContent = data.leaves.availableSick;
+    document.getElementById('annualLeaveUsed').textContent = data.leaves.annualLeaveUsed;
+    document.getElementById('annualLeaveAvailable').textContent = data.leaves.availableAnnual;
+    document.getElementById('lopDaysCount').textContent = data.leaves.lopDays;
+    document.getElementById('lopDaysValue').textContent = data.leaves.lopDays;
+
+    // Update leave details table
+    displayLeaveDetailsTable(data.leaveDetails);
+}
+
+function displayLeaveSummary(data) {
+    // This function can be used to display additional leave summary information
+    // from the /api/leaves/summary endpoint
+    console.log('Leave summary data:', data);
+}
+
+function displayLeaveDetailsTable(leaveDetails) {
+    const tbody = document.getElementById('leaveDetailsTable');
+
+    if (!leaveDetails || leaveDetails.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-data">No leave records found for selected period</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = leaveDetails.map(leave => {
+        const startDate = new Date(leave.startDate).toLocaleDateString();
+        const endDate = new Date(leave.endDate).toLocaleDateString();
+        const dateRange = leave.startDate === leave.endDate ? startDate : `${startDate} - ${endDate}`;
+
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+        const statusClass = leave.status === 'approved' ? 'approved' :
+                           leave.status === 'rejected' ? 'rejected' : 'pending';
+
+        return `
+            <tr>
+                <td>${dateRange}</td>
+                <td>${leave.type.charAt(0).toUpperCase() + leave.type.slice(1)}</td>
+                <td>${days}</td>
+                <td>${leave.reason}</td>
+                <td><span class="status-badge ${statusClass}">${leave.status.toUpperCase()}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function handleSalaryUpdate(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const updateData = {
+        userId: document.getElementById('updateUserId').value,
+        basicSalary: document.getElementById('updateBasicSalary').value || undefined,
+        allowances: document.getElementById('updateAllowances').value || undefined,
+        deductions: document.getElementById('updateDeductions').value || undefined,
+        lopDeductionPercent: document.getElementById('updateLopPercent').value || undefined
+    };
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === '') {
+            delete updateData[key];
+        }
+    });
+
+    if (!updateData.userId) {
+        showNotification('error', 'Please select an employee');
+        return;
+    }
+
+    try {
+        const response = await apiFetch('/api/salary/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update salary');
+        }
+
+        showNotification('success', 'Salary updated successfully');
+        document.getElementById('salaryUpdateForm').reset();
+        loadSalaryData(); // Reload data to show updates
+
+    } catch (error) {
+        console.error('Error updating salary:', error);
+        showNotification('error', 'Failed to update salary: ' + error.message);
+    }
+}
+
+async function generateSalarySlip() {
+    const monthFilter = document.getElementById('monthFilter');
+    const yearFilter = document.getElementById('yearFilter');
+    const employeeFilter = document.getElementById('employeeFilter');
+
+    const month = monthFilter ? monthFilter.value : new Date().getMonth() + 1;
+    const year = yearFilter ? yearFilter.value : new Date().getFullYear();
+    const user = getStoredUser();
+    const isAdmin = isAdminRole(user);
+    const userId = (isAdmin && employeeFilter && employeeFilter.value) ? employeeFilter.value : user.id;
+
+    try {
+        const response = await apiFetch(`/api/salary/slip?userId=${userId}&month=${month}&year=${year}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to generate salary slip');
+        }
+
+        const data = await response.json();
+
+        // Create printable salary slip
+        const printWindow = window.open('', '_blank');
+        const salarySlipHtml = generateSalarySlipHTML(data);
+
+        printWindow.document.write(salarySlipHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+
+    } catch (error) {
+        console.error('Error generating salary slip:', error);
+        showNotification('error', 'Failed to generate salary slip: ' + error.message);
+    }
+}
+
+function generateSalarySlipHTML(data) {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Salary Slip - ${data.employee.name}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+                .company-name { font-size: 24px; font-weight: bold; color: #333; }
+                .slip-title { font-size: 18px; margin-top: 10px; }
+                .employee-details, .salary-details { margin: 20px 0; }
+                .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; background: #f0f0f0; padding: 10px; }
+                .details-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                .details-table td { padding: 8px; border: 1px solid #ddd; }
+                .label { font-weight: bold; background: #f9f9f9; }
+                .amount { text-align: right; }
+                .total-row { font-weight: bold; background: #e6f3ff; }
+                .net-pay { font-size: 18px; font-weight: bold; text-align: center; color: #2c5aa0; margin: 20px 0; padding: 15px; border: 2px solid #2c5aa0; }
+                @media print { body { margin: 0; } }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="company-name">SOPHIA-ACADEMY HR</div>
+                <div class="slip-title">Salary Slip for ${monthNames[data.period.month - 1]} ${data.period.year}</div>
+            </div>
+
+            <div class="employee-details">
+                <div class="section-title">Employee Details</div>
+                <table class="details-table">
+                    <tr><td class="label">Name:</td><td>${data.employee.name}</td></tr>
+                    <tr><td class="label">Email:</td><td>${data.employee.email}</td></tr>
+                    <tr><td class="label">Department:</td><td>${data.employee.department}</td></tr>
+                    <tr><td class="label">Sub-Department:</td><td>${data.employee.subDepartment}</td></tr>
+                </table>
+            </div>
+
+            <div class="salary-details">
+                <div class="section-title">Earnings</div>
+                <table class="details-table">
+                    <tr><td class="label">Basic Salary</td><td class="amount">₹${data.salary.basicSalary.toLocaleString()}</td></tr>
+                    <tr><td class="label">Allowances</td><td class="amount">₹${data.salary.allowances.toLocaleString()}</td></tr>
+                    <tr class="total-row"><td class="label">Gross Earnings</td><td class="amount">₹${data.salary.grossSalary.toLocaleString()}</td></tr>
+                </table>
+
+                <div class="section-title">Deductions</div>
+                <table class="details-table">
+                    <tr><td class="label">Standard Deductions</td><td class="amount">₹${data.deductions.standardDeductions.toLocaleString()}</td></tr>
+                    <tr><td class="label">LOP Deduction (${data.leaves.lopDays} days)</td><td class="amount">₹${data.deductions.lopDeduction.toLocaleString()}</td></tr>
+                    <tr class="total-row"><td class="label">Total Deductions</td><td class="amount">₹${data.deductions.totalDeductions.toLocaleString()}</td></tr>
+                </table>
+
+                <div class="section-title">Leave Summary</div>
+                <table class="details-table">
+                    <tr><td class="label">Sick Leave Used</td><td>${data.leaves.sickLeaveUsed} / ${data.leaves.availableSick}</td></tr>
+                    <tr><td class="label">Annual Leave Used</td><td>${data.leaves.annualLeaveUsed} / ${data.leaves.availableAnnual}</td></tr>
+                    <tr><td class="label">LOP Days</td><td>${data.leaves.lopDays}</td></tr>
+                </table>
+            </div>
+
+            <div class="net-pay">
+                Net Salary: ₹${data.netSalary.toLocaleString()}
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; font-size: 12px; color: #666;">
+                Generated on ${new Date().toLocaleDateString()} | This is a system-generated document.
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+async function allocateMonthlyLeaves() {
+    try {
+        const response = await apiFetch('/api/leaves/allocate-monthly', {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to allocate monthly leaves');
+        }
+
+        const result = await response.json();
+        showNotification('success', result.message);
+
+        // Reload salary data to reflect updated leave balances
+        loadSalaryData();
+
+    } catch (error) {
+        console.error('Error allocating monthly leaves:', error);
+        showNotification('error', 'Failed to allocate monthly leaves: ' + error.message);
+    }
+}
+
+// Enhanced dashboard to show leave summary
+async function fetchEmployeeDashboardData() {
+    console.log('🎯 fetchEmployeeDashboardData: Starting...');
+    try {
+        const [usersRes, attendanceRes, leavesRes, leaveSummaryRes] = await Promise.all([
+            apiFetch("/api/users"),
+            apiFetch("/api/attendance"),
+            apiFetch("/api/leaves"),
+            apiFetch("/api/leaves/summary")
+        ]);
+
+        console.log('📡 API responses:', {
+            users: usersRes.status,
+            attendance: attendanceRes.status,
+            leaves: leavesRes.status,
+            summary: leaveSummaryRes.status
+        });
+
+        const [allUsers, allAttendance, allLeaves, leaveSummary] = await Promise.all([
+            usersRes.json(),
+            attendanceRes.json(),
+            leavesRes.json(),
+            leaveSummaryRes.json()
+        ]);
+
+        console.log('📊 Dashboard data loaded:', {
+            usersCount: allUsers.length,
+            attendanceCount: allAttendance.length,
+            leavesCount: allLeaves.length,
+            leaveSummary
+        });
+
+        const user = getStoredUser();
+        if (!user) return;
+
+        // Greet by name
+        const welcomeEl = document.getElementById('empWelcomeTitle');
+        if (welcomeEl) welcomeEl.textContent = `Welcome back, ${user.name ? user.name.split(' ')[0] : 'there'}! 👋`;
+
+        // Filter for current user only
+        const myAttendance = allAttendance.filter((attendance) =>
+            isSameUserRecord(attendance.employeeId, user),
+        );
+
+        const myLeaves = allLeaves.filter((leave) =>
+            isSameUserRecord(leave.employeeId, user),
+        );
+
+        // --- Stats calculations ---
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const today = new Date(currentYear, currentMonth, now.getDate());
+        const monthStart = new Date(currentYear, currentMonth, 1);
+
+        const joinDate = user.joinDate ? new Date(user.joinDate) : null;
+        const hasValidJoinDate = joinDate && !Number.isNaN(joinDate.getTime());
+        const activeStartDate = hasValidJoinDate && joinDate > monthStart
+            ? new Date(joinDate.getFullYear(), joinDate.getMonth(), joinDate.getDate())
+            : monthStart;
+
+        const myAttThisMonth = myAttendance.filter((a) => {
+            const d = new Date(a.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && d <= today;
+        });
+
+        const attendanceCreditByDate = new Map();
+        myAttThisMonth.forEach((attendance) => {
+            const dateKey = toDateKey(attendance.date);
+            if (!dateKey) return;
+            const credit = getAttendanceDayCredit(attendance.status);
+            const existingCredit = attendanceCreditByDate.get(dateKey) || 0;
+            if (credit > existingCredit) {
+                attendanceCreditByDate.set(dateKey, credit);
+            }
+        });
+
+        const approvedLeaveDates = new Set();
+        myLeaves.forEach((leave) => {
+            if (leave.status !== "approved") return;
+            const rangeStart = new Date(leave.startDate);
+            const rangeEnd = new Date(leave.endDate);
+            if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) return;
+
+            for (let date = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+                 date <= rangeEnd && date <= today;
+                 date.setDate(date.getDate() + 1)) {
+                if (date < activeStartDate || date.getDay() === 0) continue;
+                approvedLeaveDates.add(toDateKey(date));
+            }
+        });
+
+        let presentDays = 0;
+        let absentDays = 0;
+        if (activeStartDate <= today) {
+            for (let date = new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), activeStartDate.getDate());
+                 date <= today;
+                 date.setDate(date.getDate() + 1)) {
+                if (date.getDay() === 0) continue;
+                const dateKey = toDateKey(date);
+                const attendanceCredit = attendanceCreditByDate.get(dateKey) || 0;
+                presentDays += attendanceCredit;
+                if (approvedLeaveDates.has(dateKey)) continue;
+                absentDays += Math.max(0, 1 - attendanceCredit);
+            }
+        }
+
+        const approvedLeaves = myLeaves.filter((l) => l.status === "approved").length;
+        const pendingLeaves = myLeaves.filter((l) => l.status === "pending").length;
+
+        // Update stats display
+        const setEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        setEl("empDaysPresent", formatDashboardDayValue(presentDays));
+        setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
+        setEl("empApprovedLeaves", approvedLeaves);
+        setEl("empPendingLeaves", pendingLeaves);
+
+        // Update enhanced leave balance display
+        const leaveBalanceEl = document.getElementById('empLeaveBalance');
+        if (leaveBalanceEl && leaveSummary.currentMonthLeaves) {
+            const sickRemaining = Math.max(0, leaveSummary.currentMonthLeaves.sickLeave - (leaveSummary.lopCalculation?.sickDaysUsed || 0));
+            const annualRemaining = Math.max(0, leaveSummary.currentMonthLeaves.annualLeave - (leaveSummary.lopCalculation?.annualDaysUsed || 0));
+
+            leaveBalanceEl.innerHTML = `
+                <div class="leave-balance-row">
+                    <span>Sick Leave:</span>
+                    <span>${sickRemaining}/${leaveSummary.currentMonthLeaves.sickLeave}</span>
+                </div>
+                <div class="leave-balance-row">
+                    <span>Annual Leave:</span>
+                    <span>${annualRemaining}/${leaveSummary.currentMonthLeaves.annualLeave}</span>
+                </div>
+                ${leaveSummary.lopDetails && leaveSummary.lopDetails.currentMonth > 0 ?
+                  `<div class="leave-balance-row lop-warning">
+                     <span>⚠️ LOP Days:</span>
+                     <span>${leaveSummary.lopDetails.currentMonth}</span>
+                   </div>` : ''}
+            `;
+        }
+
+        // Add salary summary link
+        const salaryLinkEl = document.getElementById('empSalaryLink');
+        if (salaryLinkEl) {
+            salaryLinkEl.innerHTML = `
+                <a href="salary.html" style="color: var(--primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="ph ph-currency-dollar"></i>
+                    View Salary Details
+                </a>
+            `;
+        }
+
+        // Build attendance map for calendar
+        const attendanceMap = {};
+        myAttendance.forEach((a) => {
+            const dateKey = toDateKey(a.date);
+            if (!dateKey) return;
+            attendanceMap[dateKey] = a.status;
+        });
+
+        // Overlay leave ranges
+        myLeaves.forEach((l) => {
+            if (l.status !== "approved" && l.status !== "pending") return;
+            for (let d = new Date(l.startDate); d <= new Date(l.endDate); d.setDate(d.getDate() + 1)) {
+                const dateKey = toDateKey(d);
+                if (!dateKey) continue;
+                if (l.status === "approved") {
+                    attendanceMap[dateKey] = "leave-approved";
+                } else if (!attendanceMap[dateKey]) {
+                    attendanceMap[dateKey] = "leave-pending";
+                }
+            }
+        });
+
+        // Initialize calendar (existing calendar code would go here)
+        initializeEmployeeCalendar(currentYear, currentMonth, attendanceMap, myLeaves);
+
+        // Update recent leaves list
+        const leavesList = document.getElementById("empLeavesList");
+        if (leavesList) {
+            const sorted = [...myLeaves]
+                .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+                .slice(0, 3);
+            if (sorted.length === 0) {
+                leavesList.innerHTML = `<p class="text-muted" style="font-size:13px;" >No recent leaves. <a href="leave.html" style="color:var(--primary);">Apply now →</a></p>`;
+            } else {
+                leavesList.innerHTML = sorted.map((l) => {
+                    const statusColor = l.status === "approved" ? "var(--success)" :
+                                      l.status === "rejected" ? "var(--danger)" : "var(--warning)";
+                    const statusBg = l.status === "approved" ? "var(--success-bg)" :
+                                   l.status === "rejected" ? "var(--danger-bg)" : "var(--warning-bg)";
+                    const dateStr = l.startDate === l.endDate ?
+                        new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" }) :
+                        `${new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })} – ${new Date(l.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`;
+
+                    return `<div style="padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);min-width:120px;">
+                        <div style="font-weight:600;font-size:12px;margin-bottom:4px;">${l.type.charAt(0).toUpperCase() + l.type.slice(1)}</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${dateStr}</div>
+                        <div style="font-size:10px;padding:2px 6px;border-radius:4px;background:${statusBg};color:${statusColor};font-weight:600;text-transform:uppercase;">${l.status}</div>
+                    </div>`;
+                }).join("");
+            }
+        }
+
+    } catch (err) {
+        console.error('❌ Enhanced employee dashboard error:', err);
+        console.error('❌ Stack trace:', err.stack);
+
+        // Show user-friendly error message
+        const statusEl = document.getElementById('empDaysPresent');
+        if (statusEl) {
+            statusEl.textContent = 'Error loading dashboard';
+        }
+    }
+}
+
+// Utility function for notifications
+function showNotification(type, message) {
+    // Create or update notification element
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        `;
+        document.body.appendChild(notification);
+    }
+
+    // Set style based on type
+    const bgColor = type === 'success' ? '#28a745' :
+                   type === 'error' ? '#dc3545' :
+                   type === 'warning' ? '#ffc107' : '#007bff';
+
+    notification.style.backgroundColor = bgColor;
+    notification.textContent = message;
+    notification.style.opacity = '1';
+    notification.style.transform = 'translateY(0)';
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 4000);
 }
