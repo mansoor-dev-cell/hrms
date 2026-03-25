@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRMS Data Seeder</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        button {
+            padding: 12px 20px; margin: 10px 5px; border: none;
+            border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-danger { background: #dc3545; color: white; }
+        .log {
+            background: #f8f9fa; padding: 15px; border-radius: 6px;
+            margin: 15px 0; height: 300px; overflow-y: auto;
+            border: 1px solid #dee2e6; font-family: monospace; font-size: 14px;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 HRMS Data Seeder</h1>
+        <p>This tool helps populate your HRMS system with sample data for testing.</p>
+
+        <div style="margin: 20px 0;">
+            <button class="btn-primary" onclick="seedSampleData()">🌱 Seed Sample Data</button>
+            <button class="btn-success" onclick="createTestUser()">👤 Create Test User</button>
+            <button class="btn-warning" onclick="addTestAttendance()">📅 Add Test Attendance</button>
+            <button class="btn-danger" onclick="clearAll()">🗑️ Clear All Data</button>
+        </div>
+
+        <div id="log" class="log">
+            <div class="info">Ready to seed data. Click buttons above to start.</div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: #e9ecef; border-radius: 6px;">
+            <h3>Sample Credentials (after seeding):</h3>
+            <strong>Admin:</strong> admin@sophia-academy.com / admin123<br>
+            <strong>Employee:</strong> john.doe@sophia-academy.com / john123
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5001';
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${timestamp}] ${message}`;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function apiCall(endpoint, data = null) {
+            const options = {
+                method: data ? 'POST' : 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (data) options.body = JSON.stringify(data);
+
+            const response = await fetch(`${API_BASE}${endpoint}`, options);
+            return response;
+        }
+
+        async function createTestUser() {
+            log('🔹 Creating test users...', 'info');
+
+            const users = [
+                {
+                    email: 'admin@sophia-academy.com',
+                    password: 'admin123',
+                    name: 'Admin User',
+                    department: 'Sophia Academy',
+                    subDepartment: 'Administration',
+                    role: 'admin'
+                },
+                {
+                    email: 'john.doe@sophia-academy.com',
+                    password: 'john123',
+                    name: 'John Doe',
+                    department: 'Sophia Academy',
+                    subDepartment: 'Teaching Staff',
+                    role: 'employee'
+                },
+                {
+                    email: 'jane.smith@sophia-academy.com',
+                    password: 'jane123',
+                    name: 'Jane Smith',
+                    department: 'Sophia Academy',
+                    subDepartment: 'Non-Teaching Staff',
+                    role: 'employee'
+                }
+            ];
+
+            for (const user of users) {
+                try {
+                    const response = await apiCall('/api/auth/register', user);
+                    if (response.ok) {
+                        log(`✅ Created user: ${user.name} (${user.email})`, 'success');
+                    } else {
+                        const error = await response.text();
+                        log(`❌ Failed to create ${user.name}: ${error}`, 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Error creating ${user.name}: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function addTestAttendance() {
+            log('🔹 Adding test attendance data...', 'info');
+
+            // Login as admin to get token
+            try {
+                const loginRes = await apiCall('/api/auth/login', {
+                    email: 'admin@sophia-academy.com',
+                    password: 'admin123'
+                });
+
+                if (!loginRes.ok) {
+                    log('❌ Failed to login as admin. Create test users first.', 'error');
+                    return;
+                }
+
+                const { token } = await loginRes.json();
+
+                // Add attendance records for the past week
+                const attendanceData = [];
+                const today = new Date();
+
+                for (let i = 7; i >= 1; i--) {
+                    const date = new Date(today);
+                    date.setDate(date.getDate() - i);
+
+                    if (date.getDay() !== 0) { // Skip Sundays
+                        attendanceData.push({
+                            employeeEmail: 'john.doe@sophia-academy.com',
+                            date: date.toISOString().split('T')[0],
+                            status: i % 4 === 0 ? 'half-day' : 'present'
+                        });
+
+                        attendanceData.push({
+                            employeeEmail: 'jane.smith@sophia-academy.com',
+                            date: date.toISOString().split('T')[0],
+                            status: i % 5 === 0 ? 'absent' : 'present'
+                        });
+                    }
+                }
+
+                // Post attendance records
+                for (const record of attendanceData) {
+                    const response = await fetch(`${API_BASE}/api/attendance`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(record)
+                    });
+
+                    if (response.ok) {
+                        log(`✅ Added attendance for ${record.employeeEmail} on ${record.date}`, 'success');
+                    } else {
+                        log(`❌ Failed to add attendance for ${record.employeeEmail}`, 'error');
+                    }
+                }
+
+            } catch (error) {
+                log(`❌ Error adding attendance: ${error.message}`, 'error');
+            }
+        }
+
+        async function seedSampleData() {
+            log('🚀 Starting full data seeding process...', 'info');
+            await createTestUser();
+            setTimeout(async () => {
+                await addTestAttendance();
+                log('✨ Sample data seeding complete! You can now test the dashboard.', 'success');
+            }, 2000);
+        }
+
+        async function clearAll() {
+            if (!confirm('⚠️ This will delete ALL data from the system. Are you sure?')) {
+                return;
+            }
+
+            log('🗑️ Clearing all data... (This feature needs to be implemented on backend)', 'info');
+        }
+
+        // Test backend connection on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(API_BASE);
+                if (response.ok) {
+                    log('✅ Backend server is running and accessible', 'success');
+                } else {
+                    log('❌ Backend server returned error', 'error');
+                }
+            } catch (error) {
+                log('❌ Cannot connect to backend server. Make sure it\'s running on port 5001.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salary Details - SOPHIA-ACADEMY HR</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="salary.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 
-<body class="role-pending">
+<body class="role-pending salary-page">
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
@@ -61,9 +62,12 @@
             </header>
 
             <!-- Main Content -->
-            <main class="main-content">
+            <main class="content-area">
                 <div class="page-header">
-                    <h1>💰 Salary Details</h1>
+                    <div>
+                        <h1 class="page-title">Salary Details</h1>
+                        <p class="page-subtitle">Monthly compensation, deductions, and leave impact overview.</p>
+                    </div>
                     <div class="header-controls">
                         <div class="filter-section">
                             <div class="month-year-selector">
@@ -95,9 +99,11 @@
                                     <option value="">Select Employee</option>
                                 </select>
                             </div>
+                            <button id="generateSlipBtn" class="btn btn-primary" type="button">
                             <i class="ph ph-download"></i>
                             Generate Slip
-                        </button>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

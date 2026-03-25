@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRMS Debug Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .section { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .good { border-left: 4px solid #28a745; }
+        .error { border-left: 4px solid #dc3545; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔍 HRMS Debug Panel</h1>
+
+    <div id="status"></div>
+    <div id="actions" class="section">
+        <button onclick="testDashboard()">Test Dashboard</button>
+        <button onclick="clearAuth()">Clear Auth</button>
+        <button onclick="location.reload()">Refresh</button>
+    </div>
+
+    <script>
+        function testDashboard() {
+            console.log('Testing dashboard...');
+            window.open('dashboard.html', '_blank');
+        }
+
+        function clearAuth() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            console.log('Auth cleared');
+            location.reload();
+        }
+
+        async function checkStatus() {
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('user');
+
+            let html = `<div class="section ${token ? 'good' : 'error'}">
+                <h2>Authentication</h2>
+                <p>Token: ${token ? '✅ Present' : '❌ Missing'}</p>
+                <p>User: ${user ? '✅ Present' : '❌ Missing'}</p>
+            </div>`;
+
+            try {
+                const res = await fetch('http://localhost:5001/');
+                const text = await res.text();
+                html += `<div class="section good">
+                    <h2>Backend</h2>
+                    <p>✅ Server: ${text}</p>
+                </div>`;
+
+                if (token) {
+                    const authRes = await fetch('http://localhost:5001/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (authRes.ok) {
+                        const userData = await authRes.json();
+                        html += `<div class="section good">
+                            <h2>User Profile</h2>
+                            <pre>${JSON.stringify(userData, null, 2)}</pre>
+                        </div>`;
+                    } else {
+                        html += `<div class="section error">
+                            <h2>User Profile</h2>
+                            <p>❌ Failed: ${authRes.status}</p>
+                        </div>`;
+                    }
+                }
+            } catch (error) {
+                html += `<div class="section error">
+                    <h2>Backend</h2>
+                    <p>❌ Error: ${error.message}</p>
+                </div>`;
+            }
+
+            document.getElementById('status').innerHTML = html;
+        }
+
+        checkStatus();
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>

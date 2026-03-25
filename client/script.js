@@ -1,17 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM loaded, starting authentication check...');
+
     // -- Authentication Check --
     const currentPath = window.location.pathname;
     const isAuthPage = currentPath.endsWith('login.html') || currentPath.endsWith('signup.html');
+    console.log('📍 Current path:', currentPath);
+    console.log('🔐 Is auth page?', isAuthPage);
 
   const token = getAuthToken();
+  console.log('🎫 Token present?', !!token);
 
     if (!token && !isAuthPage) {
+        console.log('❌ No token and not auth page, redirecting to login...');
         // Not logged in and trying to access a protected page
     redirectToLoginPage();
         return; // Stop execution
     }
 
     if (token && isAuthPage) {
+        console.log('✅ Has token but on auth page, redirecting to dashboard...');
         // Logged in but trying to access login/signup
         window.location.href = '../dashboard.html';
         return;
@@ -141,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchEmployeeDashboardData();
             }
         }
+
+        if (page === 'salary.html') {
+            initSalaryPage();
+        }
     }
 
     async function fetchCurrentUser(authToken) {
@@ -230,21 +241,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (token && !isAuthPage) {
+        console.log('🔐 Token found, initializing authenticated page...');
+        console.log('📄 Current page:', page);
+
         const userData = getStoredUser();
+        console.log('👤 User data:', userData);
+
         if (userData) {
+            console.log('✅ User data found, applying profile and restrictions...');
             updateProfileDOM(userData);
             applyRoleBasedAccess(userData);
 
             // Initialize page content immediately
             if (page === 'dashboard.html' || page === 'index.html' || page === '') {
+                console.log('🎯 Loading dashboard...', isAdminRole(userData) ? 'Admin' : 'Employee');
                 if (isAdminRole(userData)) {
+                    console.log('📊 Calling fetchDashboardData()');
                     fetchDashboardData();
                 } else {
+                    console.log('👨‍💼 Calling fetchEmployeeDashboardData()');
                     fetchEmployeeDashboardData();
                 }
             }
+        } else {
+            console.warn('⚠️ No user data found in localStorage');
         }
         // Then fetch fresh user data
+        console.log('🔄 Fetching fresh user data...');
         fetchCurrentUser(token);
     }
 });
@@ -559,6 +582,8 @@ function initializeEmployeeCalendar(year, month, attendanceMap, myLeaves) {
         });
         nextBtn.setAttribute('data-handler-added', 'true');
     }
+  }
+
 function getTodayDateKey() {
   return toDateKey(new Date());
 }
@@ -1977,6 +2002,241 @@ async function fetchEmployeeDashboardData() {
 }
 */ // END ORIGINAL FUNCTION - USE ENHANCED VERSION INSTEAD
 
+// Enhanced dashboard to show leave summary
+async function fetchEmployeeDashboardData() {
+    console.log('🎯 fetchEmployeeDashboardData: Starting...');
+    try {
+    const [attendanceRes, leavesRes, leaveSummaryRes] = await Promise.all([
+            apiFetch("/api/attendance"),
+            apiFetch("/api/leaves"),
+            apiFetch("/api/leaves/summary")
+        ]);
+
+        console.log('📡 API responses:', {
+            attendance: attendanceRes.status,
+            leaves: leavesRes.status,
+            summary: leaveSummaryRes.status
+        });
+
+        // Check for API errors
+        if (!attendanceRes.ok) {
+            throw new Error(`Attendance API failed: ${attendanceRes.status} ${attendanceRes.statusText}`);
+        }
+        if (!leavesRes.ok) {
+            throw new Error(`Leaves API failed: ${leavesRes.status} ${leavesRes.statusText}`);
+        }
+        if (!leaveSummaryRes.ok) {
+            console.warn('⚠️ Leave summary API failed, using fallback');
+        }
+
+        const [allAttendance, allLeaves, leaveSummary] = await Promise.all([
+            attendanceRes.json(),
+            leavesRes.json(),
+            leaveSummaryRes.ok ? leaveSummaryRes.json() : { currentMonthLeaves: { sickLeave: 1, annualLeave: 1 }, lopDetails: null }
+        ]);
+
+        console.log('📊 Dashboard data loaded:', {
+            attendanceCount: allAttendance.length,
+            leavesCount: allLeaves.length,
+            leaveSummary
+        });
+
+        const user = getStoredUser();
+        if (!user) return;
+
+        // Greet by name
+        const welcomeEl = document.getElementById('empWelcomeTitle');
+        if (welcomeEl) welcomeEl.textContent = `Welcome back, ${user.name ? user.name.split(' ')[0] : 'there'}! 👋`;
+
+        // Filter for current user only
+        const myAttendance = allAttendance.filter((attendance) =>
+            isSameUserRecord(attendance.employeeId, user),
+        );
+
+        const myLeaves = allLeaves.filter((leave) =>
+            isSameUserRecord(leave.employeeId, user),
+        );
+
+        // --- Stats calculations ---
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        const today = new Date(currentYear, currentMonth, now.getDate());
+        const monthStart = new Date(currentYear, currentMonth, 1);
+
+        const joinDate = user.joinDate ? new Date(user.joinDate) : null;
+        const hasValidJoinDate = joinDate && !Number.isNaN(joinDate.getTime());
+        const activeStartDate = hasValidJoinDate && joinDate > monthStart
+            ? new Date(joinDate.getFullYear(), joinDate.getMonth(), joinDate.getDate())
+            : monthStart;
+
+        const myAttThisMonth = myAttendance.filter((a) => {
+            const d = new Date(a.date);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && d <= today;
+        });
+
+        const attendanceCreditByDate = new Map();
+        myAttThisMonth.forEach((attendance) => {
+            const dateKey = toDateKey(attendance.date);
+            if (!dateKey) return;
+            const credit = getAttendanceDayCredit(attendance.status);
+            const existingCredit = attendanceCreditByDate.get(dateKey) || 0;
+            if (credit > existingCredit) {
+                attendanceCreditByDate.set(dateKey, credit);
+            }
+        });
+
+        const approvedLeaveDates = new Set();
+        myLeaves.forEach((leave) => {
+            if (leave.status !== "approved") return;
+            const rangeStart = new Date(leave.startDate);
+            const rangeEnd = new Date(leave.endDate);
+            if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) return;
+
+            for (let date = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+                 date <= rangeEnd && date <= today;
+                 date.setDate(date.getDate() + 1)) {
+                if (date < activeStartDate || date.getDay() === 0) continue;
+                approvedLeaveDates.add(toDateKey(date));
+            }
+        });
+
+        let presentDays = 0;
+        let absentDays = 0;
+        if (activeStartDate <= today) {
+            for (let date = new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), activeStartDate.getDate());
+                 date <= today;
+                 date.setDate(date.getDate() + 1)) {
+                if (date.getDay() === 0) continue;
+                const dateKey = toDateKey(date);
+                const attendanceCredit = attendanceCreditByDate.get(dateKey) || 0;
+                presentDays += attendanceCredit;
+                if (approvedLeaveDates.has(dateKey)) continue;
+                absentDays += Math.max(0, 1 - attendanceCredit);
+            }
+        }
+
+        const approvedLeaves = myLeaves.filter((l) => l.status === "approved").length;
+        const pendingLeaves = myLeaves.filter((l) => l.status === "pending").length;
+
+        // Update stats display
+        const setEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        setEl("empDaysPresent", formatDashboardDayValue(presentDays));
+        setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
+        setEl("empApprovedLeaves", approvedLeaves);
+        setEl("empPendingLeaves", pendingLeaves);
+
+        // Update enhanced leave balance display
+        const leaveBalanceEl = document.getElementById('empLeaveBalance');
+        if (leaveBalanceEl && leaveSummary.currentMonthLeaves) {
+            const sickRemaining = Math.max(0, leaveSummary.currentMonthLeaves.sickLeave - (leaveSummary.lopCalculation?.sickDaysUsed || 0));
+            const annualRemaining = Math.max(0, leaveSummary.currentMonthLeaves.annualLeave - (leaveSummary.lopCalculation?.annualDaysUsed || 0));
+
+            leaveBalanceEl.innerHTML = `
+                <div class="leave-balance-row">
+                    <span>Sick Leave:</span>
+                    <span>${sickRemaining}/${leaveSummary.currentMonthLeaves.sickLeave}</span>
+                </div>
+                <div class="leave-balance-row">
+                    <span>Annual Leave:</span>
+                    <span>${annualRemaining}/${leaveSummary.currentMonthLeaves.annualLeave}</span>
+                </div>
+                ${leaveSummary.lopDetails && leaveSummary.lopDetails.currentMonth > 0 ?
+                  `<div class="leave-balance-row lop-warning">
+                     <span>⚠️ LOP Days:</span>
+                     <span>${leaveSummary.lopDetails.currentMonth}</span>
+                   </div>` : ''}
+            `;
+        }
+
+        // Add salary summary link
+        const salaryLinkEl = document.getElementById('empSalaryLink');
+        if (salaryLinkEl) {
+            salaryLinkEl.innerHTML = `
+                <a href="salary.html" style="color: var(--primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="ph ph-currency-dollar"></i>
+                    View Salary Details
+                </a>
+            `;
+        }
+
+        // Build attendance map for calendar
+        const attendanceMap = {};
+        myAttendance.forEach((a) => {
+            const dateKey = toDateKey(a.date);
+            if (!dateKey) return;
+            attendanceMap[dateKey] = a.status;
+        });
+
+        // Overlay leave ranges
+        myLeaves.forEach((l) => {
+            if (l.status !== "approved" && l.status !== "pending") return;
+            for (let d = new Date(l.startDate); d <= new Date(l.endDate); d.setDate(d.getDate() + 1)) {
+                const dateKey = toDateKey(d);
+                if (!dateKey) continue;
+                if (l.status === "approved") {
+                    attendanceMap[dateKey] = "leave-approved";
+                } else if (!attendanceMap[dateKey]) {
+                    attendanceMap[dateKey] = "leave-pending";
+                }
+            }
+        });
+
+        // Initialize calendar
+        initializeEmployeeCalendar(currentYear, currentMonth, attendanceMap, myLeaves);
+
+        // Update recent leaves list
+        const leavesList = document.getElementById("empLeavesList");
+        if (leavesList) {
+            const sorted = [...myLeaves]
+                .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+                .slice(0, 3);
+            if (sorted.length === 0) {
+                leavesList.innerHTML = `<p class="text-muted" style="font-size:13px;" >No recent leaves. <a href="leave.html" style="color:var(--primary);">Apply now →</a></p>`;
+            } else {
+                leavesList.innerHTML = sorted.map((l) => {
+                    const statusColor = l.status === "approved" ? "var(--success)" :
+                                      l.status === "rejected" ? "var(--danger)" : "var(--warning)";
+                    const statusBg = l.status === "approved" ? "var(--success-bg)" :
+                                   l.status === "rejected" ? "var(--danger-bg)" : "var(--warning-bg)";
+                    const dateStr = l.startDate === l.endDate ?
+                        new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" }) :
+                        `${new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })} – ${new Date(l.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`;
+
+                    return `<div style="padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);min-width:120px;">
+                        <div style="font-weight:600;font-size:12px;margin-bottom:4px;">${l.type.charAt(0).toUpperCase() + l.type.slice(1)}</div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${dateStr}</div>
+                        <div style="font-size:10px;padding:2px 6px;border-radius:4px;background:${statusBg};color:${statusColor};font-weight:600;text-transform:uppercase;">${l.status}</div>
+                    </div>`;
+                }).join("");
+            }
+        }
+
+    } catch (err) {
+        console.error('❌ Enhanced employee dashboard error:', err);
+        console.error('❌ Stack trace:', err.stack);
+
+      // Prevent persistent "Loading..." placeholders on any failure.
+      ["empDaysPresent", "empDaysAbsent", "empApprovedLeaves", "empPendingLeaves"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "0";
+      });
+
+      const leaveBalanceEl = document.getElementById('empLeaveBalance');
+      if (leaveBalanceEl) {
+        leaveBalanceEl.innerHTML = '<div class="text-muted" style="font-size:13px;">Unable to load leave balance right now.</div>';
+      }
+
+      const leavesList = document.getElementById('empLeavesList');
+      if (leavesList) {
+        leavesList.innerHTML = '<p class="text-muted" style="font-size:13px;">Unable to load recent leaves.</p>';
+      }
+    }
+}
+
 // ── Quick Leave Modal (employee dashboard) ─────────────────────────────────────
 function openQuickLeaveModal(datesSet) {
   const user = getStoredUser();
@@ -2616,6 +2876,9 @@ async function initSalaryPage() {
     const employeeFilter = document.getElementById('employeeFilter');
     if (employeeFilter) employeeFilter.addEventListener('change', loadSalaryData);
 
+    const generateSlipBtn = document.getElementById('generateSlipBtn');
+    if (generateSlipBtn) generateSlipBtn.addEventListener('click', loadSalaryData);
+
     const salaryUpdateForm = document.getElementById('salaryUpdateForm');
     if (salaryUpdateForm) salaryUpdateForm.addEventListener('submit', handleSalaryUpdate);
 
@@ -2913,225 +3176,6 @@ async function allocateMonthlyLeaves() {
         showNotification('error', 'Failed to allocate monthly leaves: ' + error.message);
     }
 }
-
-// Enhanced dashboard to show leave summary
-async function fetchEmployeeDashboardData() {
-    console.log('🎯 fetchEmployeeDashboardData: Starting...');
-    try {
-        const [usersRes, attendanceRes, leavesRes, leaveSummaryRes] = await Promise.all([
-            apiFetch("/api/users"),
-            apiFetch("/api/attendance"),
-            apiFetch("/api/leaves"),
-            apiFetch("/api/leaves/summary")
-        ]);
-
-        console.log('📡 API responses:', {
-            users: usersRes.status,
-            attendance: attendanceRes.status,
-            leaves: leavesRes.status,
-            summary: leaveSummaryRes.status
-        });
-
-        const [allUsers, allAttendance, allLeaves, leaveSummary] = await Promise.all([
-            usersRes.json(),
-            attendanceRes.json(),
-            leavesRes.json(),
-            leaveSummaryRes.json()
-        ]);
-
-        console.log('📊 Dashboard data loaded:', {
-            usersCount: allUsers.length,
-            attendanceCount: allAttendance.length,
-            leavesCount: allLeaves.length,
-            leaveSummary
-        });
-
-        const user = getStoredUser();
-        if (!user) return;
-
-        // Greet by name
-        const welcomeEl = document.getElementById('empWelcomeTitle');
-        if (welcomeEl) welcomeEl.textContent = `Welcome back, ${user.name ? user.name.split(' ')[0] : 'there'}! 👋`;
-
-        // Filter for current user only
-        const myAttendance = allAttendance.filter((attendance) =>
-            isSameUserRecord(attendance.employeeId, user),
-        );
-
-        const myLeaves = allLeaves.filter((leave) =>
-            isSameUserRecord(leave.employeeId, user),
-        );
-
-        // --- Stats calculations ---
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const today = new Date(currentYear, currentMonth, now.getDate());
-        const monthStart = new Date(currentYear, currentMonth, 1);
-
-        const joinDate = user.joinDate ? new Date(user.joinDate) : null;
-        const hasValidJoinDate = joinDate && !Number.isNaN(joinDate.getTime());
-        const activeStartDate = hasValidJoinDate && joinDate > monthStart
-            ? new Date(joinDate.getFullYear(), joinDate.getMonth(), joinDate.getDate())
-            : monthStart;
-
-        const myAttThisMonth = myAttendance.filter((a) => {
-            const d = new Date(a.date);
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear && d <= today;
-        });
-
-        const attendanceCreditByDate = new Map();
-        myAttThisMonth.forEach((attendance) => {
-            const dateKey = toDateKey(attendance.date);
-            if (!dateKey) return;
-            const credit = getAttendanceDayCredit(attendance.status);
-            const existingCredit = attendanceCreditByDate.get(dateKey) || 0;
-            if (credit > existingCredit) {
-                attendanceCreditByDate.set(dateKey, credit);
-            }
-        });
-
-        const approvedLeaveDates = new Set();
-        myLeaves.forEach((leave) => {
-            if (leave.status !== "approved") return;
-            const rangeStart = new Date(leave.startDate);
-            const rangeEnd = new Date(leave.endDate);
-            if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) return;
-
-            for (let date = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
-                 date <= rangeEnd && date <= today;
-                 date.setDate(date.getDate() + 1)) {
-                if (date < activeStartDate || date.getDay() === 0) continue;
-                approvedLeaveDates.add(toDateKey(date));
-            }
-        });
-
-        let presentDays = 0;
-        let absentDays = 0;
-        if (activeStartDate <= today) {
-            for (let date = new Date(activeStartDate.getFullYear(), activeStartDate.getMonth(), activeStartDate.getDate());
-                 date <= today;
-                 date.setDate(date.getDate() + 1)) {
-                if (date.getDay() === 0) continue;
-                const dateKey = toDateKey(date);
-                const attendanceCredit = attendanceCreditByDate.get(dateKey) || 0;
-                presentDays += attendanceCredit;
-                if (approvedLeaveDates.has(dateKey)) continue;
-                absentDays += Math.max(0, 1 - attendanceCredit);
-            }
-        }
-
-        const approvedLeaves = myLeaves.filter((l) => l.status === "approved").length;
-        const pendingLeaves = myLeaves.filter((l) => l.status === "pending").length;
-
-        // Update stats display
-        const setEl = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = val;
-        };
-        setEl("empDaysPresent", formatDashboardDayValue(presentDays));
-        setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
-        setEl("empApprovedLeaves", approvedLeaves);
-        setEl("empPendingLeaves", pendingLeaves);
-
-        // Update enhanced leave balance display
-        const leaveBalanceEl = document.getElementById('empLeaveBalance');
-        if (leaveBalanceEl && leaveSummary.currentMonthLeaves) {
-            const sickRemaining = Math.max(0, leaveSummary.currentMonthLeaves.sickLeave - (leaveSummary.lopCalculation?.sickDaysUsed || 0));
-            const annualRemaining = Math.max(0, leaveSummary.currentMonthLeaves.annualLeave - (leaveSummary.lopCalculation?.annualDaysUsed || 0));
-
-            leaveBalanceEl.innerHTML = `
-                <div class="leave-balance-row">
-                    <span>Sick Leave:</span>
-                    <span>${sickRemaining}/${leaveSummary.currentMonthLeaves.sickLeave}</span>
-                </div>
-                <div class="leave-balance-row">
-                    <span>Annual Leave:</span>
-                    <span>${annualRemaining}/${leaveSummary.currentMonthLeaves.annualLeave}</span>
-                </div>
-                ${leaveSummary.lopDetails && leaveSummary.lopDetails.currentMonth > 0 ?
-                  `<div class="leave-balance-row lop-warning">
-                     <span>⚠️ LOP Days:</span>
-                     <span>${leaveSummary.lopDetails.currentMonth}</span>
-                   </div>` : ''}
-            `;
-        }
-
-        // Add salary summary link
-        const salaryLinkEl = document.getElementById('empSalaryLink');
-        if (salaryLinkEl) {
-            salaryLinkEl.innerHTML = `
-                <a href="salary.html" style="color: var(--primary); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <i class="ph ph-currency-dollar"></i>
-                    View Salary Details
-                </a>
-            `;
-        }
-
-        // Build attendance map for calendar
-        const attendanceMap = {};
-        myAttendance.forEach((a) => {
-            const dateKey = toDateKey(a.date);
-            if (!dateKey) return;
-            attendanceMap[dateKey] = a.status;
-        });
-
-        // Overlay leave ranges
-        myLeaves.forEach((l) => {
-            if (l.status !== "approved" && l.status !== "pending") return;
-            for (let d = new Date(l.startDate); d <= new Date(l.endDate); d.setDate(d.getDate() + 1)) {
-                const dateKey = toDateKey(d);
-                if (!dateKey) continue;
-                if (l.status === "approved") {
-                    attendanceMap[dateKey] = "leave-approved";
-                } else if (!attendanceMap[dateKey]) {
-                    attendanceMap[dateKey] = "leave-pending";
-                }
-            }
-        });
-
-        // Initialize calendar (existing calendar code would go here)
-        initializeEmployeeCalendar(currentYear, currentMonth, attendanceMap, myLeaves);
-
-        // Update recent leaves list
-        const leavesList = document.getElementById("empLeavesList");
-        if (leavesList) {
-            const sorted = [...myLeaves]
-                .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-                .slice(0, 3);
-            if (sorted.length === 0) {
-                leavesList.innerHTML = `<p class="text-muted" style="font-size:13px;" >No recent leaves. <a href="leave.html" style="color:var(--primary);">Apply now →</a></p>`;
-            } else {
-                leavesList.innerHTML = sorted.map((l) => {
-                    const statusColor = l.status === "approved" ? "var(--success)" :
-                                      l.status === "rejected" ? "var(--danger)" : "var(--warning)";
-                    const statusBg = l.status === "approved" ? "var(--success-bg)" :
-                                   l.status === "rejected" ? "var(--danger-bg)" : "var(--warning-bg)";
-                    const dateStr = l.startDate === l.endDate ?
-                        new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" }) :
-                        `${new Date(l.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })} – ${new Date(l.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit" })}`;
-
-                    return `<div style="padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);min-width:120px;">
-                        <div style="font-weight:600;font-size:12px;margin-bottom:4px;">${l.type.charAt(0).toUpperCase() + l.type.slice(1)}</div>
-                        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${dateStr}</div>
-                        <div style="font-size:10px;padding:2px 6px;border-radius:4px;background:${statusBg};color:${statusColor};font-weight:600;text-transform:uppercase;">${l.status}</div>
-                    </div>`;
-                }).join("");
-            }
-        }
-
-    } catch (err) {
-        console.error('❌ Enhanced employee dashboard error:', err);
-        console.error('❌ Stack trace:', err.stack);
-
-        // Show user-friendly error message
-        const statusEl = document.getElementById('empDaysPresent');
-        if (statusEl) {
-            statusEl.textContent = 'Error loading dashboard';
-        }
-    }
-}
-
 // Utility function for notifications
 function showNotification(type, message) {
     // Create or update notification element

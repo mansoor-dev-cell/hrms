@@ -817,7 +817,7 @@ app.post("/api/leaves/allocate-monthly", authenticateToken, requireAdmin, async 
 // API: Get user's current month leave summary
 app.get("/api/leaves/summary", authenticateToken, async (req, res) => {
   try {
-    const userId = req.query.userId || req.user._id;
+    const userId = req.query.userId || req.user._id.toString();
 
     // Check if admin is requesting for another user
     if (userId !== req.user._id.toString() && !isAdminRole(req.user)) {
@@ -846,7 +846,7 @@ app.get("/api/leaves/summary", authenticateToken, async (req, res) => {
 // API: Get detailed salary slip for user
 app.get("/api/salary/slip", authenticateToken, async (req, res) => {
   try {
-    const userId = req.query.userId || req.user._id;
+    const userId = req.query.userId || req.user._id.toString();
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
@@ -949,7 +949,7 @@ app.post("/api/salary/update", authenticateToken, requireAdmin, async (req, res)
 // API: Get calendar data with LOP marking
 app.get("/api/calendar", authenticateToken, async (req, res) => {
   try {
-    const userId = req.query.userId || req.user._id;
+    const userId = req.query.userId || req.user._id.toString();
     const month = parseInt(req.query.month) || new Date().getMonth() + 1;
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
