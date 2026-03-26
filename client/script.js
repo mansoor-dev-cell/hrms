@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (page === 'emp.html') {
             fetchAndDisplayUsers();
-          setupSalaryAssignmentPanel();
         }
 
         if (page === 'attendance.html') {
@@ -134,8 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (page === "leave.html") {
           setupLeaveFormForRole(verifiedUser);
           fetchAndDisplayLeaves();
-          if (verifiedUser && verifiedUser.role === "admin")
+          if (verifiedUser && verifiedUser.role === "admin") {
             populateEmployeeDropdown("leaveEmployee");
+            setupLeavePolicyPanel();
+          }
           const saveLeaveBtn = document.getElementById("saveLeaveBtn");
           if (saveLeaveBtn)
             saveLeaveBtn.addEventListener("click", submitLeaveRequest);
@@ -385,6 +386,11 @@ function redirectToLoginPage() {
   window.location.href = currentPath.includes("/login/")
     ? "login.html"
     : "login/login.html";
+}
+
+function getCurrentPageName() {
+  const pathname = window.location.pathname;
+  return pathname.split('/').pop() || 'dashboard.html';
 }
 
 function isAdminRole(userData) {
@@ -1218,9 +1224,83 @@ async function submitAttendanceRecord(e) {
 
 let allLeavesData = [];
 
+function setLeaveQuotaPlaceholder(textValue = "-") {
+  const ids = [
+    "leaveQuotaSickPolicy",
+    "leaveQuotaSickRemaining",
+    "leaveQuotaAnnualPolicy",
+    "leaveQuotaAnnualRemaining",
+  ];
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = textValue;
+  });
+
+  const infoEl = document.getElementById("leaveQuotaCarryForwardInfo");
+  if (infoEl && textValue !== "-") {
+    infoEl.textContent = textValue;
+  }
+}
+
+function updateEmployeeLeaveQuotaPanel(summary) {
+  const policySickEl = document.getElementById("leaveQuotaSickPolicy");
+  const remainingSickEl = document.getElementById("leaveQuotaSickRemaining");
+  const policyAnnualEl = document.getElementById("leaveQuotaAnnualPolicy");
+  const remainingAnnualEl = document.getElementById("leaveQuotaAnnualRemaining");
+  const carryInfoEl = document.getElementById("leaveQuotaCarryForwardInfo");
+
+  if (!policySickEl || !remainingSickEl || !policyAnnualEl || !remainingAnnualEl) {
+    return;
+  }
+
+  const monthlyPolicySick = Number(summary?.monthlyLeaveAllocation?.sickLeave || 0);
+  const monthlyPolicyAnnual = Number(summary?.monthlyLeaveAllocation?.annualLeave || 0);
+
+  const monthAvailableSick = Number(summary?.currentMonthLeaves?.sickLeave || 0);
+  const monthAvailableAnnual = Number(summary?.currentMonthLeaves?.annualLeave || 0);
+
+  const usedSick = Number(summary?.lopCalculation?.sickDaysUsed || 0);
+  const usedAnnual = Number(summary?.lopCalculation?.annualDaysUsed || 0);
+
+  const remainingSick = Math.max(0, monthAvailableSick - usedSick);
+  const remainingAnnual = Math.max(0, monthAvailableAnnual - usedAnnual);
+
+  policySickEl.textContent = String(monthlyPolicySick);
+  remainingSickEl.textContent = `${remainingSick} left`;
+  policyAnnualEl.textContent = String(monthlyPolicyAnnual);
+  remainingAnnualEl.textContent = `${remainingAnnual} left`;
+
+  if (carryInfoEl) {
+    const carrySick = Number(summary?.currentMonthLeaves?.carryForwardSick || 0);
+    const carryAnnual = Number(summary?.currentMonthLeaves?.carryForwardAnnual || 0);
+    carryInfoEl.textContent = `Carry forward this month - Sick: ${carrySick}, Annual: ${carryAnnual}`;
+  }
+}
+
+async function loadEmployeeLeaveQuotaSummary() {
+  const currentUser = getStoredUser();
+  if (!currentUser || isAdminRole(currentUser)) {
+    return;
+  }
+
+  try {
+    const summaryRes = await apiFetch('/api/leaves/summary');
+    if (!summaryRes.ok) {
+      throw new Error('Failed to fetch leave summary');
+    }
+    const summary = await summaryRes.json();
+    updateEmployeeLeaveQuotaPanel(summary);
+  } catch (error) {
+    console.error('Unable to load employee leave quota summary:', error);
+    setLeaveQuotaPlaceholder('Unavailable right now');
+  }
+}
+
 async function fetchAndDisplayLeaves() {
     const tbody = document.getElementById('leaveTableBody');
     if (!tbody) return;
+
+    setLeaveQuotaPlaceholder();
 
     try {
         const response = await apiFetch("/api/leaves");
@@ -1329,9 +1409,11 @@ async function fetchAndDisplayLeaves() {
 
         renderLeavesTable(allLeavesData);
         setupLeaveSearch();
+        await loadEmployeeLeaveQuotaSummary();
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-danger">Failed to load leave records.</td></tr>';
+        setLeaveQuotaPlaceholder('Failed to load quota');
     }
 }
 
@@ -2704,11 +2786,22 @@ function refreshSalarySubDeptOptions() {
     .join("");
 }
 
-function populateSalaryUserDropdown() {
+async function populateSalaryUserDropdown() {
   const userSelect = document.getElementById("salaryUserId");
   if (!userSelect) return;
 
-  const users = Array.isArray(allEmployeesData) ? allEmployeesData : [];
+  let users = Array.isArray(allEmployeesData) ? allEmployeesData : [];
+  if (!users.length) {
+    try {
+      const usersRes = await apiFetch('/api/users');
+      if (usersRes.ok) {
+        users = await usersRes.json();
+      }
+    } catch (error) {
+      console.error('Unable to load users for salary assignment:', error);
+    }
+  }
+
   const rows = users
     .map((u) => {
       const userId = getRecordId(u);
@@ -2743,18 +2836,8 @@ async function submitSalaryAssignment() {
   const subDepartment = document.getElementById("salarySubDept")?.value;
   const userId = document.getElementById("salaryUserId")?.value;
 
-  const monthlySalary = Number(
-    document.getElementById("salaryMonthly")?.value || 0,
-  );
-  const annualLeaveQuota = Number(
-    document.getElementById("salaryAnnualLeave")?.value || 0,
-  );
-  const sickLeaveQuota = Number(
-    document.getElementById("salarySickLeave")?.value || 0,
-  );
-  const lopQuota = Number(
-    document.getElementById("salaryLopQuota")?.value || 0,
-  );
+  const monthlySalaryRaw = document.getElementById("salaryMonthly")?.value;
+  const monthlySalary = Number(monthlySalaryRaw || 0);
   const lopDeductionPercent = Number(
     document.getElementById("salaryLopDeduction")?.value || 0,
   );
@@ -2769,11 +2852,14 @@ async function submitSalaryAssignment() {
     return;
   }
 
+  if (monthlySalaryRaw === undefined || String(monthlySalaryRaw).trim() === "") {
+    feedback.textContent = "Please enter a monthly salary value.";
+    feedback.className = "feedback error";
+    return;
+  }
+
   if (
     monthlySalary < 0 ||
-    annualLeaveQuota < 0 ||
-    sickLeaveQuota < 0 ||
-    lopQuota < 0 ||
     lopDeductionPercent < 0 ||
     lopDeductionPercent > 100
   ) {
@@ -2789,9 +2875,6 @@ async function submitSalaryAssignment() {
     subDepartment,
     userId,
     monthlySalary,
-    annualLeaveQuota,
-    sickLeaveQuota,
-    lopQuota,
     lopDeductionPercent,
   };
 
@@ -2806,15 +2889,14 @@ async function submitSalaryAssignment() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       feedback.textContent =
-        data.message || `Assignment failed. (${res.status})`;
+        data.message || `Salary assignment failed. (${res.status})`;
       feedback.className = "feedback error";
       return;
     }
 
-    feedback.textContent = `Assignment applied to ${data.modifiedCount || 0} user(s).`;
+    feedback.textContent = `Salary assignment applied to ${data.modifiedCount || 0} user(s).`;
     feedback.className = "feedback success";
-    await fetchAndDisplayUsers();
-    populateSalaryUserDropdown();
+    await populateSalaryUserDropdown();
   } catch (err) {
     feedback.textContent = err?.message || "Cannot reach server.";
     feedback.className = "feedback error";
@@ -2823,7 +2905,7 @@ async function submitSalaryAssignment() {
   }
 }
 
-function setupSalaryAssignmentPanel() {
+async function setupSalaryAssignmentPanel() {
   const scopeEl = document.getElementById("salaryScopeType");
   const deptEl = document.getElementById("salaryDept");
   const btn = document.getElementById("assignSalaryBtn");
@@ -2846,15 +2928,163 @@ function setupSalaryAssignmentPanel() {
 
   refreshSalarySubDeptOptions();
   toggleSalaryScopeFields();
-  populateSalaryUserDropdown();
+  await populateSalaryUserDropdown();
+}
+
+function refreshLeavePolicySubDeptOptions() {
+  const deptEl = document.getElementById("leavePolicyDept");
+  const subDeptEl = document.getElementById("leavePolicySubDept");
+  if (!deptEl || !subDeptEl) return;
+
+  const options = DEPARTMENT_MAP[deptEl.value] || [];
+  subDeptEl.innerHTML = options
+    .map((opt) => `<option value="${opt}">${opt}</option>`)
+    .join("");
+}
+
+function toggleLeavePolicyScopeFields() {
+  const scopeEl = document.getElementById("leavePolicyScopeType");
+  const deptWrap = document.getElementById("leavePolicyDeptWrap");
+  const subDeptWrap = document.getElementById("leavePolicySubDeptWrap");
+  const userWrap = document.getElementById("leavePolicyUserWrap");
+  if (!scopeEl || !deptWrap || !subDeptWrap || !userWrap) return;
+
+  const scope = scopeEl.value;
+  const showDept = scope === "department" || scope === "subDepartment";
+  const showSubDept = scope === "subDepartment";
+  const showUser = scope === "individual";
+
+  deptWrap.style.display = showDept ? "" : "none";
+  subDeptWrap.style.display = showSubDept ? "" : "none";
+  userWrap.style.display = showUser ? "" : "none";
+}
+
+async function populateLeavePolicyUserDropdown() {
+  const userSelect = document.getElementById("leavePolicyUserId");
+  if (!userSelect) return;
+
+  let users = Array.isArray(allEmployeesData) ? allEmployeesData : [];
+  if (!users.length) {
+    try {
+      const usersRes = await apiFetch('/api/users');
+      if (usersRes.ok) {
+        users = await usersRes.json();
+      }
+    } catch (error) {
+      console.error('Unable to load users for leave policy assignment:', error);
+    }
+  }
+
+  const rows = users
+    .map((u) => {
+      const userId = getRecordId(u);
+      const normalized = normalizeDeptSubDept(u.department, u.subDepartment);
+      return `<option value="${userId}">${u.name} (${u.email}) - ${normalized.department} / ${normalized.subDepartment}</option>`;
+    })
+    .join("");
+
+  userSelect.innerHTML = `<option value="">Select employee</option>${rows}`;
+}
+
+async function submitLeavePolicyAssignment() {
+  const scopeType = document.getElementById("leavePolicyScopeType")?.value;
+  const department = document.getElementById("leavePolicyDept")?.value;
+  const subDepartment = document.getElementById("leavePolicySubDept")?.value;
+  const userId = document.getElementById("leavePolicyUserId")?.value;
+
+  const monthlySickLeave = Number(
+    document.getElementById("leavePolicySick")?.value || 0,
+  );
+  const monthlyAnnualLeave = Number(
+    document.getElementById("leavePolicyAnnual")?.value || 0,
+  );
+
+  const feedback = document.getElementById("leavePolicyAssignFeedback");
+  const btn = document.getElementById("assignLeavePolicyBtn");
+  if (!feedback || !btn) return;
+
+  if (scopeType === "individual" && !userId) {
+    feedback.textContent = "Please select an employee.";
+    feedback.className = "feedback error";
+    return;
+  }
+
+  if (monthlySickLeave < 0 || monthlyAnnualLeave < 0) {
+    feedback.textContent = "Monthly leave allotment values cannot be negative.";
+    feedback.className = "feedback error";
+    return;
+  }
+
+  const payload = {
+    scopeType,
+    department,
+    subDepartment,
+    userId,
+    monthlySickLeave,
+    monthlyAnnualLeave,
+  };
+
+  setLoading(btn, true);
+  try {
+    const res = await apiFetch("/api/leaves/policy/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      feedback.textContent =
+        data.message || `Leave policy assignment failed. (${res.status})`;
+      feedback.className = "feedback error";
+      return;
+    }
+
+    feedback.textContent = `Leave policy applied to ${data.modifiedCount || 0} user(s).`;
+    feedback.className = "feedback success";
+    await populateLeavePolicyUserDropdown();
+  } catch (err) {
+    feedback.textContent = err?.message || "Cannot reach server.";
+    feedback.className = "feedback error";
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function setupLeavePolicyPanel() {
+  const scopeEl = document.getElementById("leavePolicyScopeType");
+  const deptEl = document.getElementById("leavePolicyDept");
+  const assignBtn = document.getElementById("assignLeavePolicyBtn");
+  const allocateBtn = document.getElementById("allocateMonthlyLeavesBtn");
+
+  if (!scopeEl || !deptEl || !assignBtn) return;
+
+  if (!scopeEl.dataset.bound) {
+    scopeEl.addEventListener("change", toggleLeavePolicyScopeFields);
+    scopeEl.dataset.bound = "true";
+  }
+
+  if (!deptEl.dataset.bound) {
+    deptEl.addEventListener("change", refreshLeavePolicySubDeptOptions);
+    deptEl.dataset.bound = "true";
+  }
+
+  if (!assignBtn.dataset.bound) {
+    assignBtn.addEventListener("click", submitLeavePolicyAssignment);
+    assignBtn.dataset.bound = "true";
+  }
+
+  if (allocateBtn && !allocateBtn.dataset.bound) {
+    allocateBtn.addEventListener("click", allocateMonthlyLeaves);
+    allocateBtn.dataset.bound = "true";
+  }
+
+  refreshLeavePolicySubDeptOptions();
+  toggleLeavePolicyScopeFields();
+  await populateLeavePolicyUserDropdown();
 }
 
 // ── Enhanced Leave Management & Salary Features ─────────────────────────────
-
-// Initialize salary page functionality
-if (page === 'salary.html') {
-    initSalaryPage();
-}
 
 async function initSalaryPage() {
     const currentDate = new Date();
@@ -2881,6 +3111,8 @@ async function initSalaryPage() {
 
     const salaryUpdateForm = document.getElementById('salaryUpdateForm');
     if (salaryUpdateForm) salaryUpdateForm.addEventListener('submit', handleSalaryUpdate);
+
+    await setupSalaryAssignmentPanel();
 
     // Load initial data
     loadSalaryData();
@@ -2998,7 +3230,6 @@ function displayLeaveDetailsTable(leaveDetails) {
 async function handleSalaryUpdate(event) {
     event.preventDefault();
 
-    const formData = new FormData(event.target);
     const updateData = {
         userId: document.getElementById('updateUserId').value,
         basicSalary: document.getElementById('updateBasicSalary').value || undefined,
@@ -3168,8 +3399,13 @@ async function allocateMonthlyLeaves() {
         const result = await response.json();
         showNotification('success', result.message);
 
-        // Reload salary data to reflect updated leave balances
-        loadSalaryData();
+        const currentPage = getCurrentPageName();
+        if (currentPage === 'salary.html') {
+          loadSalaryData();
+        }
+        if (currentPage === 'leave.html') {
+          fetchAndDisplayLeaves();
+        }
 
     } catch (error) {
         console.error('Error allocating monthly leaves:', error);

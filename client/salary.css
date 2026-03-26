@@ -4,6 +4,28 @@
   overflow-x: hidden;
 }
 
+.salary-page .top-header {
+  padding: 0 32px;
+}
+
+.salary-page .header-right {
+  margin-left: auto;
+}
+
+.salary-page .user-profile {
+  cursor: pointer;
+}
+
+.salary-page .user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.salary-page .user-info .dept {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .salary-page .page-header {
   display: flex;
   align-items: center;

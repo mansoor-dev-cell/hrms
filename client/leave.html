@@ -72,6 +72,65 @@
                     </button>
                 </div>
 
+                <div class="card admin-only" style="margin-bottom: 24px;">
+                    <div class="card-body" style="padding: 20px 24px;">
+                        <h3 style="margin: 0 0 14px; font-size: 16px;">Leave Policy Assignment</h3>
+                        <p class="text-muted" style="margin: 0 0 14px; font-size: 13px;">
+                            Monthly leave allotment runs automatically with carry-forward. Update the monthly sick and annual leave policy here.
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                            <div class="form-group" style="margin: 0;">
+                                <label for="leavePolicyScopeType">Assign Scope</label>
+                                <select class="form-control" id="leavePolicyScopeType">
+                                    <option value="department">Department</option>
+                                    <option value="subDepartment">Sub-Department</option>
+                                    <option value="individual">Individual Employee</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin: 0;" id="leavePolicyDeptWrap">
+                                <label for="leavePolicyDept">Department</label>
+                                <select class="form-control" id="leavePolicyDept">
+                                    <option value="Sophia Academy">Sophia Academy</option>
+                                    <option value="Global Online College">Global Online College</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin: 0;" id="leavePolicySubDeptWrap">
+                                <label for="leavePolicySubDept">Sub-Department</label>
+                                <select class="form-control" id="leavePolicySubDept"></select>
+                            </div>
+
+                            <div class="form-group" style="margin: 0; display: none;" id="leavePolicyUserWrap">
+                                <label for="leavePolicyUserId">Employee</label>
+                                <select class="form-control" id="leavePolicyUserId">
+                                    <option value="">Select employee</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin: 0;">
+                                <label for="leavePolicySick">Monthly Sick Leave</label>
+                                <input type="number" class="form-control" id="leavePolicySick" min="0" step="1" value="1">
+                            </div>
+
+                            <div class="form-group" style="margin: 0;">
+                                <label for="leavePolicyAnnual">Monthly Annual Leave</label>
+                                <input type="number" class="form-control" id="leavePolicyAnnual" min="0" step="1" value="1">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-primary" id="assignLeavePolicyBtn">Apply Leave Policy</button>
+                            <button type="button" class="btn btn-outline" id="allocateMonthlyLeavesBtn">
+                                <i class="ph ph-calendar-plus"></i>
+                                Run Monthly Allocation Now
+                            </button>
+                            <div id="leavePolicyAssignFeedback" class="feedback hidden"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Leave summary -->
                 <div
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 32px;">
@@ -138,6 +197,43 @@
                                 <p class="text-muted" id="approvedThisMonthSupportingText" style="font-size: 13px; margin: 0;">Loading trend...</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card employee-only" style="margin-bottom: 24px;">
+                    <div class="card-body" style="padding: 20px 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                            <h3 style="margin: 0; font-size: 16px;">My Leave Quota and Balance</h3>
+                            <span class="text-muted" style="font-size: 12px;">Includes carry-forward when applicable</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+                            <div style="border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--bg-surface);">
+                                <p class="text-muted" style="margin: 0 0 6px; font-size: 12px; text-transform: uppercase;">Sick Leave</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 14px; font-weight: 600;">Policy Quota / Month</span>
+                                    <span id="leaveQuotaSickPolicy" style="font-size: 14px; font-weight: 700;">-</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                    <span style="font-size: 14px; font-weight: 600;">Remaining This Month</span>
+                                    <span id="leaveQuotaSickRemaining" style="font-size: 15px; font-weight: 800; color: var(--success);">-</span>
+                                </div>
+                            </div>
+
+                            <div style="border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--bg-surface);">
+                                <p class="text-muted" style="margin: 0 0 6px; font-size: 12px; text-transform: uppercase;">Annual Leave</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 14px; font-weight: 600;">Policy Quota / Month</span>
+                                    <span id="leaveQuotaAnnualPolicy" style="font-size: 14px; font-weight: 700;">-</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                                    <span style="font-size: 14px; font-weight: 600;">Remaining This Month</span>
+                                    <span id="leaveQuotaAnnualRemaining" style="font-size: 15px; font-weight: 800; color: var(--success);">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-muted" id="leaveQuotaCarryForwardInfo" style="margin: 12px 0 0; font-size: 12px;">Loading leave quota...</p>
                     </div>
                 </div>
 

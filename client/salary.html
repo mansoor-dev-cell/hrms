@@ -50,12 +50,12 @@
                 <button class="menu-toggle" id="menuToggle">
                     <i class="ph ph-list"></i>
                 </button>
-                <div class="header-right">
-                    <div class="user-profile">
+                <div class="header-right" style="margin-left: auto;">
+                    <div class="user-profile" style="cursor: pointer;">
                         <div class="avatar">U</div>
-                        <div class="user-info">
-                            <div class="name">User</div>
-                            <div class="dept">Department</div>
+                        <div class="user-info" style="display: flex; flex-direction: column;">
+                            <span class="name">User</span>
+                            <span class="dept">Department</span>
                         </div>
                     </div>
                 </div>
@@ -100,8 +100,8 @@
                                 </select>
                             </div>
                             <button id="generateSlipBtn" class="btn btn-primary" type="button">
-                            <i class="ph ph-download"></i>
-                            Generate Slip
+                                <i class="ph ph-download"></i>
+                                Generate Slip
                             </button>
                         </div>
                     </div>
@@ -275,6 +275,54 @@
 
                     <div class="admin-controls-grid">
                         <div class="control-card">
+                            <h3>Salary Assignment by Scope</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+                                <div class="form-group" style="margin: 0;">
+                                    <label for="salaryScopeType">Assign Scope</label>
+                                    <select class="form-control" id="salaryScopeType">
+                                        <option value="department">Department</option>
+                                        <option value="subDepartment">Sub-Department</option>
+                                        <option value="individual">Individual Employee</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin: 0;" id="salaryDeptWrap">
+                                    <label for="salaryDept">Department</label>
+                                    <select class="form-control" id="salaryDept">
+                                        <option value="Sophia Academy">Sophia Academy</option>
+                                        <option value="Global Online College">Global Online College</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin: 0;" id="salarySubDeptWrap">
+                                    <label for="salarySubDept">Sub-Department</label>
+                                    <select class="form-control" id="salarySubDept"></select>
+                                </div>
+
+                                <div class="form-group" style="margin: 0; display: none;" id="salaryUserWrap">
+                                    <label for="salaryUserId">Employee</label>
+                                    <select class="form-control" id="salaryUserId">
+                                        <option value="">Select employee</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin: 0;">
+                                    <label for="salaryMonthly">Monthly Salary</label>
+                                    <input type="number" class="form-control" id="salaryMonthly" min="0" step="0.01" placeholder="e.g. 45000">
+                                </div>
+
+                                <div class="form-group" style="margin: 0;">
+                                    <label for="salaryLopDeduction">LOP Deduction (%)</label>
+                                    <input type="number" class="form-control" id="salaryLopDeduction" min="0" max="100" step="0.01" value="100">
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px;">
+                                <button type="button" class="btn btn-primary" id="assignSalaryBtn">Apply Salary Assignment</button>
+                                <div id="salaryAssignFeedback" class="feedback hidden"></div>
+                            </div>
+                        </div>
+
+                        <div class="control-card">
                             <h3>Update Salary Components</h3>
                             <form id="salaryUpdateForm">
                                 <div class="form-group">
@@ -301,15 +349,6 @@
                                 </div>
                                 <button type="submit" class="btn btn-primary">Update Salary</button>
                             </form>
-                        </div>
-
-                        <div class="control-card">
-                            <h3>Monthly Leave Allocation</h3>
-                            <p>Allocate monthly leaves to all active employees and carry forward unused leaves.</p>
-                            <button class="btn btn-success" onclick="allocateMonthlyLeaves()">
-                                <i class="ph ph-calendar-plus"></i>
-                                Allocate Monthly Leaves
-                            </button>
                         </div>
                     </div>
                 </div>

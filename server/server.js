@@ -568,6 +568,44 @@ app.put(
   },
 );
 
+function buildScopedUserFilter(scopeType, department, subDepartment, userId) {
+  if (!scopeType || !["department", "subDepartment", "individual"].includes(scopeType)) {
+    return {
+      error: "scopeType must be department, subDepartment, or individual.",
+    };
+  }
+
+  if (scopeType === "department") {
+    if (!department || !VALID_DEPARTMENTS.includes(department)) {
+      return { error: "A valid department is required." };
+    }
+    return { filter: { department } };
+  }
+
+  if (scopeType === "subDepartment") {
+    if (!department || !VALID_DEPARTMENTS.includes(department)) {
+      return {
+        error: "A valid department is required for sub-department assignment.",
+      };
+    }
+
+    const validSubs = VALID_SUB_DEPARTMENTS[department] || [];
+    if (!subDepartment || !validSubs.includes(subDepartment)) {
+      return {
+        error: "A valid sub-department is required for the selected department.",
+      };
+    }
+
+    return { filter: { department, subDepartment } };
+  }
+
+  if (!userId) {
+    return { error: "userId is required for individual assignment." };
+  }
+
+  return { filter: { _id: userId } };
+}
+
 // POST /api/salary/assign
 app.post(
   "/api/salary/assign",
@@ -581,21 +619,21 @@ app.post(
         subDepartment,
         userId,
         monthlySalary,
-        annualLeaveQuota,
-        sickLeaveQuota,
-        lopQuota,
         lopDeductionPercent,
       } = req.body;
 
-      if (!scopeType || !["department", "subDepartment", "individual"].includes(scopeType)) {
-        return res.status(400).json({ message: "scopeType must be department, subDepartment, or individual." });
+      const scoped = buildScopedUserFilter(
+        scopeType,
+        department,
+        subDepartment,
+        userId,
+      );
+      if (scoped.error) {
+        return res.status(400).json({ message: scoped.error });
       }
 
       const numericFields = {
         monthlySalary,
-        annualLeaveQuota,
-        sickLeaveQuota,
-        lopQuota,
         lopDeductionPercent,
       };
 
@@ -609,50 +647,16 @@ app.post(
       if (Number(monthlySalary) < 0) {
         return res.status(400).json({ message: "monthlySalary cannot be negative." });
       }
-      if (Number(annualLeaveQuota) < 0 || Number(sickLeaveQuota) < 0 || Number(lopQuota) < 0) {
-        return res.status(400).json({ message: "Leave quotas cannot be negative." });
-      }
       if (Number(lopDeductionPercent) < 0 || Number(lopDeductionPercent) > 100) {
         return res.status(400).json({ message: "lopDeductionPercent must be between 0 and 100." });
       }
 
       const patch = {
         monthlySalary: Number(monthlySalary),
-        annualLeaveQuota: Number(annualLeaveQuota),
-        sickLeaveQuota: Number(sickLeaveQuota),
-        lopQuota: Number(lopQuota),
         lopDeductionPercent: Number(lopDeductionPercent),
       };
 
-      let filter = {};
-      if (scopeType === "department") {
-        if (!department || !VALID_DEPARTMENTS.includes(department)) {
-          return res.status(400).json({ message: "A valid department is required." });
-        }
-        filter = { department };
-      }
-
-      if (scopeType === "subDepartment") {
-        if (!department || !VALID_DEPARTMENTS.includes(department)) {
-          return res.status(400).json({ message: "A valid department is required for sub-department assignment." });
-        }
-
-        const validSubs = VALID_SUB_DEPARTMENTS[department] || [];
-        if (!subDepartment || !validSubs.includes(subDepartment)) {
-          return res.status(400).json({ message: "A valid sub-department is required for the selected department." });
-        }
-
-        filter = { department, subDepartment };
-      }
-
-      if (scopeType === "individual") {
-        if (!userId) {
-          return res.status(400).json({ message: "userId is required for individual assignment." });
-        }
-        filter = { _id: userId };
-      }
-
-      const result = await User.updateMany(filter, { $set: patch });
+      const result = await User.updateMany(scoped.filter, { $set: patch });
       const matchedCount = result.matchedCount || 0;
       const modifiedCount = result.modifiedCount || 0;
 
@@ -661,9 +665,102 @@ app.post(
       }
 
       return res.json({
-        message: "Compensation and leave policy assigned successfully.",
+        message: "Salary assignment updated successfully.",
         scopeType,
         matchedCount,
+        modifiedCount,
+      });
+    } catch (err) {
+      return res.status(500).json({ message: "Server error.", error: err.message });
+    }
+  },
+);
+
+// POST /api/leaves/policy/assign
+app.post(
+  "/api/leaves/policy/assign",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const {
+        scopeType,
+        department,
+        subDepartment,
+        userId,
+        monthlySickLeave,
+        monthlyAnnualLeave,
+      } = req.body;
+
+      const scoped = buildScopedUserFilter(
+        scopeType,
+        department,
+        subDepartment,
+        userId,
+      );
+      if (scoped.error) {
+        return res.status(400).json({ message: scoped.error });
+      }
+
+      if (!Number.isFinite(Number(monthlySickLeave)) || !Number.isFinite(Number(monthlyAnnualLeave))) {
+        return res.status(400).json({
+          message: "monthlySickLeave and monthlyAnnualLeave must be valid numbers.",
+        });
+      }
+
+      if (Number(monthlySickLeave) < 0 || Number(monthlyAnnualLeave) < 0) {
+        return res.status(400).json({
+          message: "Monthly leave allotments cannot be negative.",
+        });
+      }
+
+      const users = await User.find(scoped.filter);
+      if (!users.length) {
+        return res.status(404).json({ message: "No users matched the selected scope." });
+      }
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      let modifiedCount = 0;
+
+      for (const user of users) {
+        const oldSick = Number(user.monthlyLeaveAllocation?.sickLeave || 0);
+        const oldAnnual = Number(user.monthlyLeaveAllocation?.annualLeave || 0);
+        const nextSick = Number(monthlySickLeave);
+        const nextAnnual = Number(monthlyAnnualLeave);
+
+        user.monthlyLeaveAllocation = {
+          sickLeave: nextSick,
+          annualLeave: nextAnnual,
+        };
+
+        // Keep this month's used-leave impact intact by applying only allocation delta.
+        if (
+          Number(user.currentMonthLeaves?.year) === currentYear &&
+          Number(user.currentMonthLeaves?.month) === currentMonth
+        ) {
+          const sickDelta = nextSick - oldSick;
+          const annualDelta = nextAnnual - oldAnnual;
+
+          user.currentMonthLeaves.sickLeave = Math.max(
+            0,
+            Number(user.currentMonthLeaves.sickLeave || 0) + sickDelta,
+          );
+          user.currentMonthLeaves.annualLeave = Math.max(
+            0,
+            Number(user.currentMonthLeaves.annualLeave || 0) + annualDelta,
+          );
+        }
+
+        await user.save();
+        modifiedCount += 1;
+      }
+
+      return res.json({
+        message: "Leave policy assignment updated successfully.",
+        scopeType,
+        matchedCount: users.length,
         modifiedCount,
       });
     } catch (err) {
@@ -721,40 +818,99 @@ async function allocateMonthlyLeaves() {
   }
 }
 
+function ensureUserMonthlyLeaveAllocation(user, targetYear, targetMonth) {
+  const currentYear = Number(user.currentMonthLeaves?.year || 0);
+  const currentMonth = Number(user.currentMonthLeaves?.month || 0);
+
+  if (currentYear === targetYear && currentMonth === targetMonth) {
+    return false;
+  }
+
+  const isYearReset =
+    targetMonth === 1 && currentMonth === 12 && targetYear === currentYear + 1;
+
+  const carryForwardSick = isYearReset
+    ? 0
+    : Number(user.currentMonthLeaves?.sickLeave || 0);
+  const carryForwardAnnual = isYearReset
+    ? 0
+    : Number(user.currentMonthLeaves?.annualLeave || 0);
+
+  user.currentMonthLeaves = {
+    year: targetYear,
+    month: targetMonth,
+    sickLeave:
+      Number(user.monthlyLeaveAllocation?.sickLeave || 0) + carryForwardSick,
+    annualLeave:
+      Number(user.monthlyLeaveAllocation?.annualLeave || 0) + carryForwardAnnual,
+    carryForwardSick,
+    carryForwardAnnual,
+  };
+
+  return true;
+}
+
 // Calculate LOP for a user based on leave taken in current month
 async function calculateLOP(userId, month, year) {
   try {
     const user = await User.findById(userId);
     if (!user) return { error: 'User not found' };
 
-    // Get all approved leaves for the month
+    ensureUserMonthlyLeaveAllocation(user, Number(year), Number(month));
+
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
+    const monthStartDate = new Date(monthStart);
+    const monthEndDate = new Date(`${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`);
 
+    // Get all approved leaves that overlap with the month.
     const approvedLeaves = await Leave.find({
       employeeId: userId,
       status: 'approved',
-      startDate: { $gte: monthStart, $lte: monthEnd }
+      $or: [
+        { startDate: { $gte: monthStart, $lte: monthEnd } },
+        { endDate: { $gte: monthStart, $lte: monthEnd } },
+      ],
+    });
+
+    const absentAttendance = await Attendance.find({
+      employeeId: userId,
+      status: 'absent',
+      date: { $gte: monthStart, $lte: monthEnd },
     });
 
     let sickDaysUsed = 0;
     let annualDaysUsed = 0;
-    let totalDaysInMonth = new Date(year, month, 0).getDate();
+    const totalDaysInMonth = new Date(year, month, 0).getDate();
+    const approvedLeaveDateKeys = new Set();
 
-    // Calculate total leave days used by type
+    // Calculate leave usage for the selected month and build a leave-day set.
     for (const leave of approvedLeaves) {
       const startDate = new Date(leave.startDate);
       const endDate = new Date(leave.endDate);
-      const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+      const overlapStart = startDate > monthStartDate ? startDate : monthStartDate;
+      const overlapEnd = endDate < monthEndDate ? endDate : monthEndDate;
+      if (overlapEnd < overlapStart) continue;
+
+      const daysDiff = Math.ceil((overlapEnd - overlapStart) / (1000 * 60 * 60 * 24)) + 1;
 
       if (leave.type === 'sick') {
         sickDaysUsed += daysDiff;
       } else if (leave.type === 'annual') {
         annualDaysUsed += daysDiff;
       }
+
+      for (
+        let d = new Date(overlapStart);
+        d <= overlapEnd;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const dateKey = d.toISOString().split('T')[0];
+        approvedLeaveDateKeys.add(dateKey);
+      }
     }
 
-    // Calculate LOP
     const availableSick = user.currentMonthLeaves.sickLeave;
     const availableAnnual = user.currentMonthLeaves.annualLeave;
 
@@ -769,6 +925,16 @@ async function calculateLOP(userId, month, year) {
     if (annualDaysUsed > availableAnnual) {
       lopDays += (annualDaysUsed - availableAnnual);
     }
+
+    // Add absent attendance days that are not covered by approved leave.
+    const absentDates = new Set();
+    for (const attendance of absentAttendance) {
+      const dateKey = String(attendance.date || '').split('T')[0];
+      if (!dateKey || approvedLeaveDateKeys.has(dateKey)) continue;
+      absentDates.add(dateKey);
+    }
+    const absentLopDays = absentDates.size;
+    lopDays += absentLopDays;
 
     // Calculate LOP amount
     const dailySalary = user.monthlySalary / totalDaysInMonth;
@@ -795,6 +961,7 @@ async function calculateLOP(userId, month, year) {
       lopAmount,
       sickDaysUsed,
       annualDaysUsed,
+      absentDays: absentLopDays,
       availableSick,
       availableAnnual
     };
@@ -833,6 +1000,7 @@ app.get("/api/leaves/summary", authenticateToken, async (req, res) => {
     const lopCalculation = await calculateLOP(userId, currentMonth, currentYear);
 
     res.json({
+      monthlyLeaveAllocation: user.monthlyLeaveAllocation,
       currentMonthLeaves: user.currentMonthLeaves,
       lopDetails: user.lopDetails,
       salaryComponents: user.salaryComponents,
