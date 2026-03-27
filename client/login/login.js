@@ -73,6 +73,7 @@ const siSubmit = document.getElementById("siSubmit");
 const suSubmit = document.getElementById("suSubmit");
 const fpSubmit = document.getElementById("fpSubmit");
 const rpSubmit = document.getElementById("rpSubmit");
+const resendCodeBtn = document.getElementById("resendCodeBtn");
 const tabSlider = document.getElementById("tabSlider");
 const strengthBar = document.getElementById("strengthBar");
 const strengthLabel = document.getElementById("strengthLabel");
@@ -176,48 +177,76 @@ document.getElementById("suPassword").addEventListener("input", (e) => {
   strengthLabel.className = `strength-label${cls ? " " + cls : ""}`;
 });
 
-// ── Forgot Password submit
-fpSubmit.addEventListener("click", async () => {
-  clearFeedback(fpFeedback);
-  const email = document.getElementById("fpEmail").value.trim();
-  if (!email)
-    return showFeedback(
-      fpFeedback,
+async function requestResetCode(email, { fromResend = false } = {}) {
+  const targetEmail = String(email || "").trim();
+  if (!targetEmail) {
+    showFeedback(
+      fromResend ? rpFeedback : fpFeedback,
       "error",
       "Please enter your email address.",
     );
+    return;
+  }
 
-  setLoading(fpSubmit, true);
+  const activeButton = fromResend ? resendCodeBtn : fpSubmit;
+  const activeFeedback = fromResend ? rpFeedback : fpFeedback;
+  clearFeedback(activeFeedback);
+
+  setLoading(activeButton, true);
   try {
     const res = await fetch(`${API_BASE}/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: targetEmail }),
     });
     const data = await res.json();
 
     if (!res.ok) {
       showFeedback(
-        fpFeedback,
+        activeFeedback,
         "error",
         data.message || "Something went wrong.",
       );
       return;
     }
 
-    forgotEmail = email;
+    forgotEmail = targetEmail;
 
     // Always show generic confirmation. Reset codes should not be exposed in UI.
     const notice = document.getElementById("resetCodeNotice");
     notice.textContent =
       "If the account exists, use the reset code sent to the configured channel.";
     document.getElementById("rpCode").value = "";
-    showResetPassword();
+    if (!fromResend) {
+      showResetPassword();
+    } else {
+      showFeedback(
+        rpFeedback,
+        "success",
+        "A new reset code has been sent if the account exists.",
+      );
+    }
   } catch {
-    showFeedback(fpFeedback, "error", "Cannot reach server. Is it running?");
+    showFeedback(
+      activeFeedback,
+      "error",
+      "Cannot reach server. Is it running?",
+    );
   } finally {
-    setLoading(fpSubmit, false);
+    setLoading(activeButton, false);
   }
+}
+
+// ── Forgot Password submit
+fpSubmit.addEventListener("click", async () => {
+  const email = document.getElementById("fpEmail").value.trim();
+  await requestResetCode(email);
+});
+
+resendCodeBtn.addEventListener("click", async () => {
+  const fallbackEmail = document.getElementById("fpEmail").value.trim();
+  const emailToUse = forgotEmail || fallbackEmail;
+  await requestResetCode(emailToUse, { fromResend: true });
 });
 
 // ── Reset Password submit

@@ -442,6 +442,13 @@ html, body {
     margin-top: 4px;
 }
 
+.reset-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -4px;
+    margin-bottom: 2px;
+}
+
 /* ── Responsive ─────────────────────────── */
 @media (max-width: 860px) {
     .auth-layout { grid-template-columns: 1fr; }

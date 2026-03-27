@@ -1,0 +1,129 @@
+/* App-wide responsive overrides to stabilize layouts on phones/tablets */
+
+.feedback {
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.feedback.hidden {
+  display: none;
+}
+
+.feedback.success {
+  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success);
+}
+
+.feedback.error {
+  border-color: rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--danger);
+}
+
+@media (max-width: 992px) {
+  .top-header {
+    padding: 0 16px !important;
+  }
+
+  .content-area {
+    padding: 20px !important;
+  }
+
+  .user-info .dept {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 20px;
+  }
+
+  .header-right {
+    gap: 10px;
+  }
+
+  .card-body,
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .table th,
+  .table td {
+    padding: 12px 14px;
+    white-space: nowrap;
+  }
+
+  .modal {
+    width: calc(100% - 20px);
+    max-width: 100% !important;
+  }
+
+  .filter-section,
+  .month-year-selector,
+  .form-select,
+  .employee-selector,
+  .employee-selector select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .leave-status-link {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  [style*="width: 250px"],
+  [style*="width: 240px"],
+  [style*="width: 220px"],
+  [style*="width: 200px"] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  [style*="min-width: 250px"],
+  [style*="min-width: 220px"],
+  [style*="min-width: 200px"] {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .content-area {
+    padding: 16px !important;
+  }
+
+  .page-header {
+    gap: 12px;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .page-header .btn,
+  .modal-footer .btn {
+    width: auto;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .logo-text {
+    font-size: 12px;
+  }
+
+  #leaveSearchWrap,
+  #employeePaginationControls {
+    width: 100% !important;
+  }
+}

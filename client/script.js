@@ -275,6 +275,10 @@ let filteredEmployeesData = [];
 let employeeCurrentPage = 1;
 const EMPLOYEE_PAGE_SIZE = 5;
 let selectedCalDates = new Set(); // Dates selected on employee attendance calendar
+let calViewYear = new Date().getFullYear();
+let calViewMonth = new Date().getMonth(); // 0-indexed
+let calCachedAttendanceMap = {};
+let calCachedLeaves = [];
 const LOCAL_BACKEND_PORT = "5001";
 const API_BASE_URL = resolveApiBaseUrl();
 const DEPARTMENT_MAP = {
@@ -480,11 +484,18 @@ function toDateKey(value) {
 
 // Calendar initialization for employee dashboard
 function initializeEmployeeCalendar(year, month, attendanceMap, myLeaves) {
+    // Cache data so month-navigation can reuse without a full re-fetch
+    calViewYear = year;
+    calViewMonth = month;
+    calCachedAttendanceMap = attendanceMap;
+    calCachedLeaves = myLeaves;
+
     const calendarGrid = document.getElementById('empCalendarGrid');
     if (!calendarGrid) return;
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const todayKey = toDateKey(new Date());
 
     // Update month label
     const monthLabel = document.getElementById('calMonthLabel');
@@ -495,97 +506,113 @@ function initializeEmployeeCalendar(year, month, attendanceMap, myLeaves) {
         });
     }
 
-    let calendarHTML = '';
+    // Build calendar via DOM (enables per-cell event listeners)
+    calendarGrid.innerHTML = '';
 
     // Days of the week headers
-    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    weekdays.forEach(day => {
-        calendarHTML += `<div style="font-size:12px;font-weight:700;padding:8px 4px;color:var(--text-muted);text-align:center;">${day}</div>`;
+    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'font-size:12px;font-weight:700;padding:8px 4px;color:var(--text-muted);text-align:center;';
+        hdr.textContent = day;
+        calendarGrid.appendChild(hdr);
     });
 
-    // Empty cells for days before the first day of the month
+    // Empty cells before first day
     for (let i = 0; i < firstDayOfWeek; i++) {
-        calendarHTML += '<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bg-muted);border-radius:8px;"></div>';
+        const empty = document.createElement('div');
+        empty.style.cssText = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--bg-muted);border-radius:8px;';
+        calendarGrid.appendChild(empty);
     }
 
-    // Days of the month
+    // Day cells
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
         const dateKey = toDateKey(date);
-        const isToday = date.toDateString() === new Date().toDateString();
+        const isToday = dateKey === todayKey;
+        const isSunday = date.getDay() === 0;
+        const isSel = selectedCalDates.has(dateKey);
 
-        let dayStyle = 'aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;';
-        let dayContent = day;
-        let bgColor = 'var(--bg)';
-
-        // Check attendance status
         const attendanceStatus = attendanceMap[dateKey];
-        if (attendanceStatus) {
+
+        let bgColor = 'var(--bg)';
+        let extraStyle = '';
+
+        if (isSel) {
+            bgColor = 'var(--primary)';
+            extraStyle = 'color:white;';
+        } else if (attendanceStatus) {
             switch (attendanceStatus) {
                 case 'present':
                 case 'late':
-                    bgColor = 'var(--success)';
-                    dayStyle += 'color:white;';
-                    break;
+                    bgColor = 'var(--success)'; extraStyle = 'color:white;'; break;
                 case 'absent':
-                    bgColor = 'rgba(239,68,68,0.3)';
-                    dayStyle += 'color:var(--danger);';
-                    break;
+                    bgColor = 'rgba(239,68,68,0.3)'; extraStyle = 'color:var(--danger);'; break;
                 case 'half-day':
-                    bgColor = 'rgba(79, 70, 229, 0.18)';
-                    dayStyle += 'border:1.5px dashed var(--primary);color:var(--primary);';
-                    break;
+                    bgColor = 'rgba(79,70,229,0.18)'; extraStyle = 'border:1.5px dashed var(--primary);color:var(--primary);'; break;
                 case 'leave-approved':
-                    bgColor = 'var(--warning)';
-                    dayStyle += 'color:white;';
-                    break;
+                    bgColor = 'var(--warning)'; extraStyle = 'color:white;'; break;
                 case 'leave-pending':
-                    bgColor = 'rgba(245, 158, 11, 0.18)';
-                    dayStyle += 'border:1.5px dashed var(--warning);color:var(--warning);';
-                    break;
+                    bgColor = 'rgba(245,158,11,0.18)'; extraStyle = 'border:1.5px dashed var(--warning);color:var(--warning);'; break;
             }
         }
 
-        if (isToday) {
-            dayStyle += 'box-shadow: 0 0 0 2px var(--primary);';
-        }
-
-        if (date.getDay() === 0) {
+        if (isSunday && !isSel && !attendanceStatus) {
             bgColor = 'var(--border)';
-            dayStyle += 'color:var(--text-muted);';
+            extraStyle = 'color:var(--text-muted);';
         }
 
-        dayStyle += `background:${bgColor};`;
+        const todayRing = isToday && !isSel ? 'box-shadow:0 0 0 2px var(--primary);' : '';
+        const cell = document.createElement('div');
+        cell.style.cssText = `aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;background:${bgColor};${extraStyle}${todayRing}`;
+        cell.dataset.date = dateKey;
+        cell.textContent = day;
 
-        calendarHTML += `<div style="${dayStyle}" data-date="${dateKey}">${dayContent}</div>`;
+        // Click: toggle date selection (skip already-marked days and Sundays)
+        const isMarked = attendanceStatus && attendanceStatus !== 'leave-pending';
+        if (!isSunday && !isMarked) {
+            cell.addEventListener('click', () => {
+                if (selectedCalDates.has(dateKey)) {
+                    selectedCalDates.delete(dateKey);
+                } else {
+                    selectedCalDates.add(dateKey);
+                }
+                initializeEmployeeCalendar(calViewYear, calViewMonth, calCachedAttendanceMap, calCachedLeaves);
+            });
+        }
+
+        calendarGrid.appendChild(cell);
     }
 
-    calendarGrid.innerHTML = calendarHTML;
+    // Update selection bar
+    const selBar = document.getElementById('calSelectionBar');
+    const countEl = document.getElementById('calSelCount');
+    if (selBar) {
+        selBar.style.display = selectedCalDates.size > 0 ? 'flex' : 'none';
+    }
+    if (countEl) {
+        countEl.textContent = `${selectedCalDates.size} day${selectedCalDates.size !== 1 ? 's' : ''} selected — click "Apply Leave" to continue`;
+    }
 
-    // Add click handlers for calendar navigation if they don't exist
+    // Navigation: use .onclick to replace any prior handler on each render
     const prevBtn = document.getElementById('calPrevMonth');
     const nextBtn = document.getElementById('calNextMonth');
 
-    if (prevBtn && !prevBtn.hasAttribute('data-handler-added')) {
-        prevBtn.addEventListener('click', () => {
-            const newMonth = month === 0 ? 11 : month - 1;
-            const newYear = month === 0 ? year - 1 : year;
-            // Refresh dashboard with new month
-            fetchEmployeeDashboardData();
-        });
-        prevBtn.setAttribute('data-handler-added', 'true');
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            calViewMonth--;
+            if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+            initializeEmployeeCalendar(calViewYear, calViewMonth, calCachedAttendanceMap, calCachedLeaves);
+        };
     }
 
-    if (nextBtn && !nextBtn.hasAttribute('data-handler-added')) {
-        nextBtn.addEventListener('click', () => {
-            const newMonth = month === 11 ? 0 : month + 1;
-            const newYear = month === 11 ? year + 1 : year;
-            // Refresh dashboard with new month
-            fetchEmployeeDashboardData();
-        });
-        nextBtn.setAttribute('data-handler-added', 'true');
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            calViewMonth++;
+            if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+            initializeEmployeeCalendar(calViewYear, calViewMonth, calCachedAttendanceMap, calCachedLeaves);
+        };
     }
-  }
+}
 
 function getTodayDateKey() {
   return toDateKey(new Date());
@@ -1127,7 +1154,7 @@ async function fetchAndDisplayAttendance() {
         const dateFilterEl = document.getElementById('attDateFilter');
         // Auto-apply today's date filter on first load
         if (dateFilterEl && dateFilterEl.value === todayStr) {
-            const todayRecords = allAttendanceData.filter(r => r.date === todayStr);
+            const todayRecords = allAttendanceData.filter(r => toDateKey(r.date) === todayStr);
             renderAttendanceTable(todayRecords.length > 0 ? todayRecords : allAttendanceData);
         }
     } catch (error) {
@@ -2056,428 +2083,7 @@ async function updateLeaveStatus(leaveId, newStatus) {
     }
 }
 
-// --- Employee Dashboard Logic ─────────────────────────────────────────────────
-// ✨ This function has been moved to enhanced version at end of file
-/* ORIGINAL EMPLOYEE DASHBOARD FUNCTION - DISABLED
-async function fetchEmployeeDashboardData() {
-  const user = getStoredUser();
-    if (!user) return;
-
-    // Greet by name
-    const welcomeEl = document.getElementById('empWelcomeTitle');
-    if (welcomeEl) welcomeEl.textContent = `Welcome back, ${user.name ? user.name.split(' ')[0] : 'there'}! 👋`;
-
-    try {
-      const [attRes, leavesRes] = await Promise.all([
-        apiFetch("/api/attendance"),
-        apiFetch("/api/leaves"),
-      ]);
-
-      const allAttendance = attRes.ok ? await attRes.json() : [];
-      const allLeaves = leavesRes.ok ? await leavesRes.json() : [];
-
-      // Filter for current user only
-      const myAttendance = allAttendance.filter((attendance) =>
-        isSameUserRecord(attendance.employeeId, user),
-      );
-
-      const myLeaves = allLeaves.filter((leave) =>
-        isSameUserRecord(leave.employeeId, user),
-      );
-
-      // --- Stats ---
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      const today = new Date(currentYear, currentMonth, now.getDate());
-      const monthStart = new Date(currentYear, currentMonth, 1);
-
-      const joinDate = user.joinDate ? new Date(user.joinDate) : null;
-      const hasValidJoinDate = joinDate && !Number.isNaN(joinDate.getTime());
-      const activeStartDate =
-        hasValidJoinDate && joinDate > monthStart
-          ? new Date(
-              joinDate.getFullYear(),
-              joinDate.getMonth(),
-              joinDate.getDate(),
-            )
-          : monthStart;
-
-      const myAttThisMonth = myAttendance.filter((a) => {
-        const d = new Date(a.date);
-        return (
-          d.getMonth() === currentMonth &&
-          d.getFullYear() === currentYear &&
-          d <= today
-        );
-      });
-
-      const attendanceCreditByDate = new Map();
-      myAttThisMonth.forEach((attendance) => {
-        const dateKey = toDateKey(attendance.date);
-        if (!dateKey) return;
-
-        const credit = getAttendanceDayCredit(attendance.status);
-        const existingCredit = attendanceCreditByDate.get(dateKey) || 0;
-        if (credit > existingCredit) {
-          attendanceCreditByDate.set(dateKey, credit);
-        }
-      });
-
-      const approvedLeaveDates = new Set();
-      myLeaves.forEach((leave) => {
-        if (leave.status !== "approved") return;
-
-        const rangeStart = new Date(leave.startDate);
-        const rangeEnd = new Date(leave.endDate);
-        if (
-          Number.isNaN(rangeStart.getTime()) ||
-          Number.isNaN(rangeEnd.getTime())
-        )
-          return;
-
-        for (
-          let date = new Date(
-            rangeStart.getFullYear(),
-            rangeStart.getMonth(),
-            rangeStart.getDate(),
-          );
-          date <= rangeEnd && date <= today;
-          date.setDate(date.getDate() + 1)
-        ) {
-          if (date < activeStartDate || date.getDay() === 0) continue;
-          approvedLeaveDates.add(toDateKey(date));
-        }
-      });
-
-      let presentDays = 0;
-      let absentDays = 0;
-      if (activeStartDate <= today) {
-        for (
-          let date = new Date(
-            activeStartDate.getFullYear(),
-            activeStartDate.getMonth(),
-            activeStartDate.getDate(),
-          );
-          date <= today;
-          date.setDate(date.getDate() + 1)
-        ) {
-          if (date.getDay() === 0) continue;
-
-          const dateKey = toDateKey(date);
-          const attendanceCredit = attendanceCreditByDate.get(dateKey) || 0;
-          presentDays += attendanceCredit;
-
-          if (approvedLeaveDates.has(dateKey)) continue;
-          absentDays += Math.max(0, 1 - attendanceCredit);
-        }
-      }
-
-      const approvedLeaves = myLeaves.filter(
-        (l) => l.status === "approved",
-      ).length;
-      const pendingLeaves = myLeaves.filter(
-        (l) => l.status === "pending",
-      ).length;
-
-      const setEl = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-      };
-      setEl("empDaysPresent", formatDashboardDayValue(presentDays));
-      setEl("empDaysAbsent", formatDashboardDayValue(absentDays));
-      setEl("empApprovedLeaves", approvedLeaves);
-      setEl("empPendingLeaves", pendingLeaves);
-
-      // ── Build attendance map: YYYY-MM-DD → status ──────────────────────────
-      const attendanceMap = {};
-      myAttendance.forEach((a) => {
-        const dateKey = toDateKey(a.date);
-        if (!dateKey) return;
-        attendanceMap[dateKey] = a.status;
-      });
-      // Overlay leave ranges so the calendar reflects approval state.
-      myLeaves.forEach((l) => {
-        if (l.status !== "approved" && l.status !== "pending") return;
-        for (
-          let d = new Date(l.startDate);
-          d <= new Date(l.endDate);
-          d.setDate(d.getDate() + 1)
-        ) {
-          const dateKey = toDateKey(d);
-          if (!dateKey) continue;
-          if (l.status === "approved") {
-            attendanceMap[dateKey] = "leave-approved";
-          } else if (!attendanceMap[dateKey]) {
-            attendanceMap[dateKey] = "leave-pending";
-          }
-        }
-      });
-
-      // ── Calendar state ──────────────────────────────────────────────────────
-      let calYear = currentYear;
-      let calMonth = currentMonth;
-
-      function updateSelBar() {
-        const bar = document.getElementById("calSelectionBar");
-        const countEl = document.getElementById("calSelCount");
-        if (!bar) return;
-        if (selectedCalDates.size > 0) {
-          bar.style.display = "flex";
-          if (countEl)
-            countEl.textContent = `${selectedCalDates.size} day${selectedCalDates.size !== 1 ? "s" : ""} selected — click "Apply Leave" to continue`;
-        } else {
-          bar.style.display = "none";
-        }
-      }
-
-      function renderCalendar(year, month) {
-        const grid = document.getElementById("empCalendarGrid");
-        const label = document.getElementById("calMonthLabel");
-        if (!grid || !label) return;
-
-        label.textContent = new Date(year, month, 1).toLocaleDateString(
-          "en-US",
-          { month: "long", year: "numeric" },
-        );
-        grid.innerHTML = "";
-
-        // Day headers
-        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d) => {
-          const hdr = document.createElement("div");
-          hdr.textContent = d;
-          hdr.style.cssText =
-            "font-size:13px;font-weight:700;color:var(--text-muted);padding:8px 0 14px;text-transform:uppercase;letter-spacing:0.5px;";
-          grid.appendChild(hdr);
-        });
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const todayStr = getTodayDateKey();
-
-        for (let i = 0; i < firstDay; i++)
-          grid.appendChild(document.createElement("div"));
-
-        for (let day = 1; day <= daysInMonth; day++) {
-          const cell = document.createElement("div");
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const dow = new Date(year, month, day).getDay();
-          const isSun = dow === 0;
-          const isWknd = dow === 0 || dow === 6;
-          const isToday = dateStr === todayStr;
-          const isFuture = dateStr > todayStr;
-          const status = attendanceMap[dateStr];
-          const isSel = selectedCalDates.has(dateStr);
-
-          let bg = "transparent",
-            color = "var(--text-main)",
-            border = "none",
-            cursor = "default",
-            title = "",
-            opacity = "1";
-
-          if (isSel) {
-            bg = "var(--primary)";
-            color = "#fff";
-            cursor = "pointer";
-            title = "Selected — click to deselect";
-          } else if (status === "leave-approved") {
-            bg = "var(--warning)";
-            color = "#fff";
-            title = "Approved Leave";
-          } else if (status === "leave-pending") {
-            bg = "rgba(245, 158, 11, 0.18)";
-            color = "var(--warning)";
-            border = "1.5px dashed var(--warning)";
-            title = "Pending Leave Request";
-          } else if (status === "present") {
-            bg = "var(--success)";
-            color = "#fff";
-            title = "Present";
-          } else if (status === "late") {
-            bg = "var(--success)";
-            color = "#fff";
-            title = "Late / Present";
-          } else if (status === "half-day") {
-            bg = "rgba(79, 70, 229, 0.18)";
-            color = "var(--primary)";
-            border = "1.5px dashed var(--primary)";
-            title = "Half Day";
-          } else if (status === "absent") {
-            bg = "rgba(239,68,68,0.22)";
-            color = "var(--danger)";
-            title = "Absent";
-          } else if (isSun) {
-            bg = "var(--border)";
-            color = "var(--text-muted)";
-            if (!isFuture) {
-              cursor = "pointer";
-              title = "Sunday — click to mark as working day";
-            }
-          } else if (isWknd) {
-            bg = "var(--border)";
-            color = "var(--text-muted)";
-          } else {
-            // Past or future selectable weekday
-            cursor = "pointer";
-            title = isFuture
-              ? "Click to select for leave"
-              : "Click to select for leave";
-            if (isFuture) opacity = "0.65";
-          }
-
-          if (isToday && !isSel) border = "2px solid var(--primary)";
-
-          cell.style.cssText = `
-                    min-height:80px; display:flex; align-items:center; justify-content:center;
-                    border-radius:10px; font-size:18px; font-weight:700;
-                    background:${bg}; color:${color}; border:${border};
-                    cursor:${cursor}; opacity:${opacity}; transition:background 0.15s, border 0.15s, transform 0.1s;
-                `;
-          if (cursor === "pointer" && !isSel && !status)
-            cell.classList.add("cal-selectable");
-          cell.textContent = day;
-          if (title) cell.title = title;
-
-          // Past Sundays: mark working day. All non-weekend, non-marked days (past or future): select for leave.
-          if (!isWknd || (isSun && !isFuture && !status)) {
-            cell.addEventListener("click", () => {
-              if (isSun && !status && !isFuture) {
-                // Mark Sunday as working day
-                cell.title = "Saving…";
-                apiFetch("/api/attendance", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    employeeId: user.id,
-                    date: dateStr,
-                    status: "present",
-                    checkIn: "--:--",
-                    checkOut: "--:--",
-                    notes: "Working on Sunday",
-                  }),
-                })
-                  .then((r) => {
-                    if (r.ok) {
-                      attendanceMap[dateStr] = "present";
-                      renderCalendar(year, month);
-                    }
-                  })
-                  .catch(console.error);
-                return;
-              }
-              // Cannot select already marked days
-              if (
-                status === "leave-approved" ||
-                status === "leave-pending" ||
-                status === "present" ||
-                status === "late" ||
-                status === "absent"
-              )
-                return;
-              if (isWknd) return;
-              if (isSel) selectedCalDates.delete(dateStr);
-              else selectedCalDates.add(dateStr);
-              renderCalendar(year, month);
-              updateSelBar();
-            });
-          }
-          grid.appendChild(cell);
-        }
-        updateSelBar();
-      }
-
-      // Nav buttons — .onclick to avoid duplicate listeners on re-render
-      const prevBtn = document.getElementById("calPrevMonth");
-      const nextBtn = document.getElementById("calNextMonth");
-      if (prevBtn)
-        prevBtn.onclick = () => {
-          calMonth--;
-          if (calMonth < 0) {
-            calMonth = 11;
-            calYear--;
-          }
-          renderCalendar(calYear, calMonth);
-        };
-      if (nextBtn)
-        nextBtn.onclick = () => {
-          calMonth++;
-          if (calMonth > 11) {
-            calMonth = 0;
-            calYear++;
-          }
-          renderCalendar(calYear, calMonth);
-        };
-
-      // Selection bar buttons
-      const clearBtn = document.getElementById("calClearSelBtn");
-      const calApplyBtn = document.getElementById("calApplyLeaveBtn");
-      const empApplyBtn = document.getElementById("empApplyLeaveBtn");
-      const qlSubmitBtnEl = document.getElementById("qlSubmitBtn");
-
-      if (clearBtn)
-        clearBtn.onclick = () => {
-          selectedCalDates.clear();
-          renderCalendar(calYear, calMonth);
-        };
-      if (calApplyBtn)
-        calApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
-      if (empApplyBtn)
-        empApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
-      if (qlSubmitBtnEl) qlSubmitBtnEl.onclick = submitQuickLeave;
-
-      renderCalendar(calYear, calMonth);
-
-      // ── Recent leaves sidebar ───────────────────────────────────────────────
-      const leavesList = document.getElementById("empLeavesList");
-      if (leavesList) {
-        const sorted = [...myLeaves]
-          .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-          .slice(0, 5);
-        if (sorted.length === 0) {
-          leavesList.innerHTML = `<p class="text-muted" style="font-size:13px;">No leave requests yet. <a href="leave.html" style="color:var(--primary);">Apply now →</a></p>`;
-        } else {
-          leavesList.innerHTML = sorted
-            .map((l) => {
-              const bColor =
-                l.status === "approved"
-                  ? "var(--success)"
-                  : l.status === "rejected"
-                    ? "var(--danger)"
-                    : "#d97706";
-              const bBg =
-                l.status === "approved"
-                  ? "var(--success-bg)"
-                  : l.status === "rejected"
-                    ? "rgba(239,68,68,0.12)"
-                    : "var(--warning-bg)";
-              const s = new Date(l.startDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "2-digit",
-              });
-              const e = new Date(l.endDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "2-digit",
-              });
-              const dStr = l.startDate === l.endDate ? s : `${s} – ${e}`;
-              const tStr = l.type
-                ? l.type.charAt(0).toUpperCase() + l.type.slice(1) + " Leave"
-                : "Leave";
-              return `<div style="display:flex;flex-direction:column;gap:6px;min-width:160px;padding:12px 16px;border-radius:10px;background:var(--bg-surface);border:1px solid var(--border);flex:0 0 auto;">
-                        <div style="font-weight:600;font-size:13px;color:var(--text-main);">${tStr}</div>
-                        <div style="font-size:12px;color:var(--text-muted);">${dStr}</div>
-                        <span style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;background:${bBg};color:${bColor};text-transform:uppercase;letter-spacing:0.5px;align-self:flex-start;">${l.status}</span>
-                    </div>`;
-            })
-            .join("");
-        }
-      }
-    } catch (err) {
-        console.error('Employee dashboard error:', err);
-    }
-}
-*/ // END ORIGINAL FUNCTION - USE ENHANCED VERSION INSTEAD
-
+// Enhanced dashboard to show leave summary
 // Enhanced dashboard to show leave summary
 async function fetchEmployeeDashboardData() {
     console.log('🎯 fetchEmployeeDashboardData: Starting...');
@@ -2665,6 +2271,19 @@ async function fetchEmployeeDashboardData() {
 
         // Initialize calendar
         initializeEmployeeCalendar(currentYear, currentMonth, attendanceMap, myLeaves);
+
+        // Wire selection bar and apply-leave buttons
+        const calClearBtn = document.getElementById('calClearSelBtn');
+        const calApplyBtn = document.getElementById('calApplyLeaveBtn');
+        const empApplyBtn = document.getElementById('empApplyLeaveBtn');
+        const qlSubmitBtnEl = document.getElementById('qlSubmitBtn');
+        if (calClearBtn) calClearBtn.onclick = () => {
+            selectedCalDates.clear();
+            initializeEmployeeCalendar(calViewYear, calViewMonth, calCachedAttendanceMap, calCachedLeaves);
+        };
+        if (calApplyBtn) calApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
+        if (empApplyBtn) empApplyBtn.onclick = () => openQuickLeaveModal(selectedCalDates);
+        if (qlSubmitBtnEl) qlSubmitBtnEl.onclick = submitQuickLeave;
 
         // Update recent leaves list
         const leavesList = document.getElementById("empLeavesList");
@@ -3815,6 +3434,8 @@ function showNotification(type, message) {
     if (!notification) {
         notification = document.createElement('div');
         notification.id = 'notification';
+          notification.setAttribute('role', 'status');
+          notification.setAttribute('aria-live', 'polite');
         notification.style.cssText = `
             position: fixed;
             top: 20px;

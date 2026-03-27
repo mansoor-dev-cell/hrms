@@ -4,6 +4,7 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const dns = require("dns");
@@ -62,6 +63,80 @@ function isDevResetCodeExposureEnabled() {
 
 function isAdminRole(user) {
   return user && String(user.role).toLowerCase() === "admin";
+}
+
+let mailTransporter = null;
+
+function getMailTransporter() {
+  if (mailTransporter) return mailTransporter;
+
+  const host = String(process.env.SMTP_HOST || "").trim();
+  const user = String(process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.SMTP_PASS || "").trim();
+  const port = Number(process.env.SMTP_PORT) || 587;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  mailTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  return mailTransporter;
+}
+
+async function sendResetCodeEmail({ email, code, expiry }) {
+  const transporter = getMailTransporter();
+  if (!transporter) {
+    throw new Error("SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM.");
+  }
+
+  const from = String(process.env.SMTP_FROM || process.env.SMTP_USER || "").trim();
+  if (!from) {
+    throw new Error("Missing SMTP_FROM and SMTP_USER for sender address.");
+  }
+
+  const expiresAt = new Date(expiry).toLocaleString("en-US", {
+    hour12: true,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: "HRMS password reset code",
+    text: `Your HRMS password reset code is ${code}. This code expires at ${expiresAt}. If you did not request this, ignore this email.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #1f2937;">
+        <h2 style="margin-bottom: 8px;">Reset Your HRMS Password</h2>
+        <p style="margin-top: 0;">Use the code below to reset your password:</p>
+        <div style="font-size: 28px; letter-spacing: 4px; font-weight: 700; color: #111827; margin: 16px 0;">
+          ${code}
+        </div>
+        <p style="margin: 0;">This code expires at <strong>${expiresAt}</strong>.</p>
+        <p style="margin-top: 12px; color: #6b7280;">If you did not request this reset, you can safely ignore this message.</p>
+      </div>
+    `,
+  });
+}
+
+async function issueResetCodeForUser(user) {
+  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+  const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000);
+
+  user.resetTokenHash = hashResetCode(resetToken);
+  user.resetTokenExpiry = resetTokenExpiry;
+  await user.save();
+
+  return { resetToken, resetTokenExpiry };
 }
 
 const DEFAULT_DEPARTMENT = "Sophia Academy";
@@ -200,14 +275,16 @@ app.post("/api/auth/register", async (req, res) => {
     if (!name || !email || !password)
       return res.status(400).json({ message: "All fields are required." });
 
-    const existing = await User.findOne({ email });
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing)
       return res
         .status(409)
         .json({ message: "An account with this email already exists." });
 
     const hashed = await bcrypt.hash(password, 12);
-    const newUser = await User.create({ name, email, password: hashed });
+    const newUser = await User.create({ name, email: normalizedEmail, password: hashed });
 
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
@@ -234,6 +311,9 @@ app.post("/api/auth/register", async (req, res) => {
       },
     });
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "An account with this email already exists." });
+    }
     res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
@@ -293,20 +373,20 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required." });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
 
     // Always return the same message to prevent user enumeration
     if (!user) {
       return res.json({ message: "If this email is registered, a reset code has been sent." });
     }
 
-    // Generate a 6-digit numeric reset code
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-
-    user.resetTokenHash = hashResetCode(resetToken);
-    user.resetTokenExpiry = resetTokenExpiry;
-    await user.save();
+    const { resetToken, resetTokenExpiry } = await issueResetCodeForUser(user);
+    await sendResetCodeEmail({
+      email: normalizedEmail,
+      code: resetToken,
+      expiry: resetTokenExpiry,
+    });
 
     const payload = {
       message: "If this email is registered, a reset code has been sent.",
@@ -315,7 +395,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     if (isDevResetCodeExposureEnabled()) {
       payload.resetCode = resetToken;
       console.log(
-        `[Password Reset][DEV ONLY] Code for ${email}: ${resetToken}`,
+        `[Password Reset][DEV ONLY] Code for ${normalizedEmail}: ${resetToken}`,
       );
     }
 
@@ -384,7 +464,7 @@ app.get("/api/auth/me", authenticateToken, async (req, res) => {
 // GET /api/users
 app.get("/api/users", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const users = await User.find().select("-password -resetTokenHash -resetTokenExpiry");
     const normalizedUsers = users.map((userDoc) => {
       const user = userDoc.toObject();
       const normalizedDept = normalizeUserDepartmentFields(
@@ -694,6 +774,10 @@ app.post("/api/attendance/mark-self", authenticateToken, async (req, res) => {
       record: populated,
     });
   } catch (err) {
+    // Gracefully handle duplicate-key race (concurrent requests / fast retries)
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Attendance already marked for today." });
+    }
     return res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
@@ -794,7 +878,7 @@ app.get("/api/leaves", authenticateToken, async (req, res) => {
     const leaves = await Leave.find(
       isAdminRole(req.user) ? {} : { employeeId: req.user._id },
     )
-      .populate("employeeId", "name department role")
+      .populate("employeeId", "name department subDepartment role")
       .sort({ createdAt: -1 });
     res.json(leaves);
   } catch (err) {
@@ -823,7 +907,7 @@ app.post("/api/leaves", authenticateToken, async (req, res) => {
 
     const populated = await leave.populate(
       "employeeId",
-      "name department role",
+      "name department subDepartment role",
     );
     res
       .status(201)
@@ -849,7 +933,7 @@ app.put(
         req.params.id,
         { status },
         { new: true },
-      ).populate("employeeId", "name department role");
+      ).populate("employeeId", "name department subDepartment role");
 
       if (!leave) return res.status(404).json({ message: "Leave not found." });
 
@@ -1142,8 +1226,11 @@ function ensureUserMonthlyLeaveAllocation(user, targetYear, targetMonth) {
   return true;
 }
 
-// Calculate LOP for a user based on leave taken in current month
-async function calculateLOP(userId, month, year) {
+// Calculate LOP for a user based on leave taken in a given month.
+// Pass { persist: true } only from routes that should update stored salary state
+// (i.e. the current-month leaves summary). Historical reads (salary slip, calendar)
+// must never mutate stored data.
+async function calculateLOP(userId, month, year, { persist = false } = {}) {
   try {
     const user = await User.findById(userId);
     if (!user) return { error: 'User not found' };
@@ -1232,13 +1319,8 @@ async function calculateLOP(userId, month, year) {
     const dailySalary = user.monthlySalary / totalDaysInMonth;
     const lopAmount = lopDays * dailySalary * (user.lopDeductionPercent / 100);
 
-    // Update user LOP details
+    // Update in-memory LOP details (idempotent sets — no accumulation)
     user.lopDetails.currentMonth = lopDays;
-    if (month === 1) {
-      user.lopDetails.yearToDate = lopDays; // Reset for new year
-    } else {
-      user.lopDetails.yearToDate += lopDays;
-    }
     user.lopDetails.deductionAmount = lopAmount;
 
     // Update salary components
@@ -1246,7 +1328,11 @@ async function calculateLOP(userId, month, year) {
     user.salaryComponents.lopDeduction = lopAmount;
     user.salaryComponents.netSalary = user.monthlySalary - lopAmount - user.salaryComponents.deductions;
 
-    await user.save();
+    // Only persist when called from a write-safe context (current-month summary).
+    // Historical reads (salary slip, calendar) must not mutate stored data.
+    if (persist) {
+      await user.save();
+    }
 
     return {
       lopDays,
@@ -1286,10 +1372,10 @@ app.get("/api/leaves/summary", authenticateToken, async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found." });
 
-    // Calculate current month LOP
+    // Calculate current month LOP and persist updated salary state
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    const lopCalculation = await calculateLOP(userId, currentMonth, currentYear);
+    const lopCalculation = await calculateLOP(userId, currentMonth, currentYear, { persist: true });
 
     res.json({
       monthlyLeaveAllocation: user.monthlyLeaveAllocation,
@@ -1380,6 +1466,19 @@ app.post("/api/salary/update", authenticateToken, requireAdmin, async (req, res)
 
     if (!userId) {
       return res.status(400).json({ message: "userId is required." });
+    }
+
+    // Validate numeric fields
+    const numericFields = { basicSalary, allowances, deductions, lopDeductionPercent };
+    for (const [field, value] of Object.entries(numericFields)) {
+      if (value === undefined) continue;
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0) {
+        return res.status(400).json({ message: `${field} must be a non-negative number.` });
+      }
+    }
+    if (lopDeductionPercent !== undefined && Number(lopDeductionPercent) > 100) {
+      return res.status(400).json({ message: "lopDeductionPercent cannot exceed 100." });
     }
 
     const updateData = {};
