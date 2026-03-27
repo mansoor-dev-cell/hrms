@@ -2084,7 +2084,6 @@ async function updateLeaveStatus(leaveId, newStatus) {
 }
 
 // Enhanced dashboard to show leave summary
-// Enhanced dashboard to show leave summary
 async function fetchEmployeeDashboardData() {
     console.log('🎯 fetchEmployeeDashboardData: Starting...');
     try {
