@@ -1,249 +1,216 @@
-# HRMS Bug And Inconsistency Audit
+# HRMS Bug Audit
 
-Audit date: 2026-03-17
+Date: 2026-03-27
+Scope: Full static audit of client + server code (functional issues + code-level issues)
 
-This document lists confirmed bugs, broken flows, inconsistent behavior, and dummy or misleading UI found in the current HRMS codebase.
+## Summary
 
-## High-impact broken flows
+- Critical issues: 3
+- High issues: 5
+- Medium issues: 6
+- Low issues: 3
 
-### 1. `Add Employee flow is broken end-to-end`
+This audit is based on full code review of the current codebase. It does not include browser automation or device-lab runtime checks, but issues below are directly traceable to implementation.
 
--   File: client/emp.html
--   File: client/script.js
--   File: server/server.js
--   Resolved by removing the obsolete Add Employee UI, client submission logic, and backend `POST /api/users` route.
--   Employees are now created only through signup, which matches the current product flow.
+---
 
-### ~~2. Employee leave page filtering is wrong~~
+## Critical Issues
 
--   File: client/script.js
--   Resolved by centralizing user-record matching and comparing `id`/`_id` consistently, with email only as a fallback.
--   The leave page and employee dashboard now use the same identity matching logic for populated `employeeId` records.
+### 1) Password reset code is never sent to email (functional blocker)
+- Severity: Critical
+- Area: Authentication / Forgot Password
+- Evidence:
+  - `server/server.js:291` (`POST /api/auth/forgot-password`) generates reset code and stores hash/expiry.
+  - No SMTP/nodemailer/mail-send implementation exists in `server/server.js`.
+  - Only optional dev exposure is present (`ALLOW_DEV_RESET_CODE`) at `server/server.js:59`, `server/server.js:316`.
+- Impact:
+  - Users cannot receive reset code via email in normal production mode.
+  - Matches your observed issue exactly.
 
-### ~~3. Attendance "Present Today" count is overwritten incorrectly~~
+### 2) `style.css` is corrupted with large invalid CSS blocks (breaks layout consistency + mobile behavior)
+- Severity: Critical
+- Area: Global UI / Responsiveness
+- Evidence:
+  - Corrupted/garbled CSS starts around `client/style.css:652` and continues through many lines (examples: `client/style.css:652`, `client/style.css:697`, `client/style.css:746`, `client/style.css:917`, `client/style.css:1173`).
+- Impact:
+  - Browser CSS parsing becomes unpredictable after this region.
+  - Rules can be ignored or partially applied, causing inconsistent desktop/mobile rendering.
+  - Strongly aligned with "whole website not responsive" complaint.
 
--   File: client/script.js
--   Resolved by removing the duplicate overwrite and computing a single `presentTodayCount` value.
--   The attendance card now consistently counts present, half-day, and late records the same way the page logic already intended.
+### 3) LOP/year-to-date values can inflate on every read (data corruption by GET calls)
+- Severity: Critical
+- Area: Salary + Leave calculations
+- Evidence:
+  - `server/server.js:1161` (`calculateLOP`) mutates and saves user salary/LOP fields.
+  - `user.lopDetails.yearToDate += lopDays` at `server/server.js:1280` runs whenever function is called.
+  - This function is called inside read APIs:
+    - `GET /api/leaves/summary` at `server/server.js:1314`
+    - `GET /api/salary/slip` at `server/server.js:1362`
+    - `GET /api/calendar` at `server/server.js:1435`
+- Impact:
+  - Repeated viewing of pages can keep increasing year-to-date LOP and deductions incorrectly.
 
-### ~~4. Employee dashboard absence count is inflated and logically incorrect~~
+---
 
--   File: client/script.js
--   Resolved by calculating employee attendance day-by-day from the later of month start or join date.
--   Approved leave days are excluded from absence, half-days count as `0.5`, and future dates are not counted.
--   The auth payloads now include `joinDate` so the dashboard has the data needed for a consistent calculation.
+## High Issues
 
-### ~~5. Employee dashboard calendar does not reflect pending leave state~~
+### 4) Employee calendar month navigation does not actually navigate month
+- Severity: High
+- Area: Employee dashboard calendar UX
+- Evidence:
+  - In `initializeEmployeeCalendar`, prev/next compute new month/year but do not use them; both just call `fetchEmployeeDashboardData()`.
+  - See `client/script.js:570` and `client/script.js:580`.
+- Impact:
+  - Users cannot browse prior/next months reliably.
 
--   File: client/script.js
--   File: client/dashboard.html
--   Resolved by overlaying both approved and pending leave ranges on the employee calendar.
--   Pending leave now has its own visual state and legend entry, and those days are not selectable for a second leave request.
--   The employee dashboard stats and calendar now represent the same leave states.
+### 5) Employee dashboard calendar is display-only; date selection flow is missing from active implementation
+- Severity: High
+- Area: Leave calendar interaction
+- Evidence:
+  - Active path calls `initializeEmployeeCalendar(...)` at `client/script.js:2667`.
+  - That function renders cells but does not add date-selection handlers for leave application.
+  - Selection logic exists in old commented block (`selectedCalDates`, click handlers around `client/script.js:2235-2426`) and is not used by active path.
+- Impact:
+  - Matches reported issue: user cannot select dates from calendar.
 
-## Role and access inconsistencies
+### 6) Sensitive reset-token metadata is exposed in admin user listing
+- Severity: High
+- Area: Security / Data exposure
+- Evidence:
+  - `GET /api/users` selects `-password` only at `server/server.js:387`.
+  - `User` model contains `resetTokenHash` and `resetTokenExpiry` fields (`server/models/user.js:65-66`).
+- Impact:
+  - Admin user payload can include password reset token hash metadata unnecessarily.
 
-### ~~6. Admin and employee UI separation depends only on client-side toggling~~
+### 7) Leave API populate omits `subDepartment`, causing wrong department display fallback on UI
+- Severity: High
+- Area: Leaves table correctness
+- Evidence:
+  - `GET /api/leaves` populates only `name department role` at `server/server.js:792`.
+  - Client expects both `department` and `subDepartment` in leave tables (`client/script.js:1885`).
+- Impact:
+  - UI can show incorrect/fallback sub-department values.
 
--   File: client/script.js
--   File: client/dashboard.html
--   File: client/leave.html
--   File: client/emp.html
--   File: client/attendance.html
--   File: server/server.js
--   Resolved by requiring a verified bearer token on role-sensitive API routes, enforcing admin-only access on user directory and leave-approval actions, and scoping attendance and leave writes to the signed-in user when the caller is not an admin.
--   Protected pages now start in a neutral `role-pending` state and only reveal role-specific sections after `/api/auth/me` confirms the active user.
--   Result: admin-only data and actions are no longer exposed just because the browser toggled CSS classes.
+### 8) Salary update endpoint has no numeric/range validation
+- Severity: High
+- Area: Payroll integrity
+- Evidence:
+  - `POST /api/salary/update` directly casts and writes values at `server/server.js:1383-1398`.
+  - No checks for negative/basic sanity constraints unlike `/api/salary/assign`.
+- Impact:
+  - Invalid salary/deduction values can be persisted and break payroll outputs.
 
-### ~~7. Cached user role can briefly render the wrong UI~~
+---
 
--   File: client/script.js
--   File: client/dashboard.html
--   File: client/leave.html
--   File: client/emp.html
--   File: client/attendance.html
--   Resolved by removing the initial role application from cached `localStorage` data and waiting for `/api/auth/me` before initializing page content.
--   Protected pages now load in a neutral `role-pending` state, so stale cached role data cannot briefly reveal the wrong admin or employee sections.
--   Result: role-specific UI only appears after the server confirms the active user.
+## Medium Issues
 
-### ~~8. Invalid or expired token is not handled cleanly~~
+### 9) Duplicate/fragmented employee dashboard implementation in `script.js` increases regression risk
+- Severity: Medium
+- Area: Frontend maintainability
+- Evidence:
+  - Old large dashboard implementation remains commented and overlapping with active version.
+  - Active function starts at `client/script.js:2483`; old block includes substantial alternate calendar logic around `client/script.js:2071-2432`.
+- Impact:
+  - Future edits can target wrong block and reintroduce bugs.
 
--   File: client/script.js
--   Resolved by centralizing API calls through `apiFetch()`, which clears auth state and redirects to login on `401` responses.
--   Initial profile load now uses the same guarded path, so invalid/expired tokens cannot leave users on partial protected pages.
--   Result: stale tokens are cleaned up immediately and the session returns to a consistent login state.
+### 10) Attendance "today" filtering uses raw date string equality in one path
+- Severity: Medium
+- Area: Attendance filtering
+- Evidence:
+  - In `fetchAndDisplayAttendance`, initial date auto-filter uses `r.date === todayStr` at `client/script.js` (around `todayRecords` line near 1145).
+  - Elsewhere, normalized `toDateKey` is used correctly.
+- Impact:
+  - Inconsistent behavior when API date includes time component.
 
-## Dummy or misleading UI
+### 11) Potential race on self-attendance create path can return 500 (duplicate key)
+- Severity: Medium
+- Area: Attendance reliability
+- Evidence:
+  - Unique index exists on `(employeeId, date)` in `server/models/attendance.js:35`.
+  - `POST /api/attendance/mark-self` does find-then-create pattern (`server/server.js:633` onward) without duplicate-key handling.
+- Impact:
+  - Fast repeated clicks/network retries may cause 500 instead of graceful conflict response.
 
-### ~~9. Admin dashboard contains hard-coded fake copy~~
+### 12) Register email normalization inconsistency can produce poor duplicate-account UX
+- Severity: Medium
+- Area: Auth
+- Evidence:
+  - Register checks existing user with raw `email` (`server/server.js:203`) instead of normalized value.
+  - Model lowercases on save (`server/models/user.js:10`), so duplicate may fail late at DB unique index.
+- Impact:
+  - Users may get generic server error instead of clean "already exists".
 
--   File: client/dashboard.html
--   File: client/script.js
--   Resolved by replacing static helper copy with dynamic placeholders and binding those labels to live values from dashboard API data.
--   Pending approvals, attendance presence rate, and month-over-month employee change now render from fetched records.
--   Result: the admin dashboard cards no longer show hard-coded fake values.
+### 13) Multiple pages rely heavily on inline style grids with fixed widths, reducing true mobile adaptability
+- Severity: Medium
+- Area: Responsiveness
+- Evidence examples:
+  - `client/emp.html:78` (`min-width: 250px`), `client/emp.html:85` (`width: 240px`), `client/emp.html:98` (`width: 200px`).
+  - `client/leave.html` and `client/dashboard.html` contain many inline grid definitions not centrally controlled by media queries.
+- Impact:
+  - Narrow screens still overflow or compress poorly despite basic global media queries.
 
-### ~~10. Leave page stats include fake supporting text~~
+### 14) Mobile/sidebar behavior exists, but many page sections are not componentized for stack behavior
+- Severity: Medium
+- Area: UX consistency
+- Evidence:
+  - Global responsive rules are basic (`client/style.css:535+`).
+  - Large section layouts in pages are inline and not governed by shared breakpoint classes.
+- Impact:
+  - Mixed behavior across pages/devices.
 
--   File: client/leave.html
--   File: client/script.js
--   The leave stats section includes hard-coded text such as:
-    -   `2 Annual, 4 Sick Leaves`
-    -   `+15% from last month`
--   Resolved by replacing both helper lines with dynamic placeholders and populating them from live leave data.
--   On Leave Today now shows a computed leave-type breakdown from approved leaves active today.
--   Approved This Month now shows a computed month-over-month trend using current vs previous month approvals.
--   Result: leave stat supporting text is data-driven and no longer fake.
+---
 
-### ~~11. Review links and filter links are placeholders~~
+## Low Issues
 
--   File: client/leave.html
--   File: client/script.js
--   Several links use `href="#"`, including:
-    -   `Review all requests →`
-    -   the leave status filter links
--   Resolved by replacing placeholder anchor links with real button controls for leave status filters.
--   The review control now applies the pending filter and scrolls to the leave table, so it performs a concrete action.
--   Result: leave filter/review controls are functional and no longer dead placeholders.
+### 15) Duplicate `@media (max-width: 576px)` block in `style.css`
+- Severity: Low
+- Evidence:
+  - Duplicate block appears twice around `client/style.css:552-573`.
+- Impact:
+  - Redundant rules, harder maintenance.
 
-### ~~12. Pagination controls are dummy on the employee page~~
+### 16) Running server from repository root fails due wrong entry location
+- Severity: Low
+- Evidence:
+  - App entry is `server/server.js`, but root `node server.js` fails (observed operationally).
+- Impact:
+  - Developer confusion during local startup.
 
--   File: client/emp.html
--   File: client/script.js
--   Buttons like `Previous`, numbered pages, and `Next` are static UI only.
--   Resolved by wiring pagination controls to real client-side paging state.
--   Employee directory now renders paged rows, previous/next navigation, dynamic page numbers, and accurate entry count text.
--   Search/filter actions reset to page 1 and paginate the filtered dataset.
--   Result: employee pagination controls now behave as functional navigation, not static UI.
+### 17) Notification system is dynamic DOM-injected and inline-styled; no accessibility semantics
+- Severity: Low
+- Evidence:
+  - `showNotification` in `client/script.js:3780+` builds toast without ARIA live region.
+- Impact:
+  - Reduced accessibility/readability for important status messages.
 
-### ~~13. "Load More Records" on attendance page is dummy~~
+---
 
--   File: client/attendance.html
--   File: client/script.js
--   Resolved by wiring the button to incremental attendance table rendering.
--   Attendance records now render in batches, and each click loads the next set from the active filtered results.
--   The button state/text updates to reflect remaining records and disables when all rows are shown.
--   Result: the control is functional and no longer misleading.
+## User-Reported Issues Validation
 
-### ~~14. Dashboard still labels a section as placeholder~~
+### A) "Resend code on forgot password is not getting sent"
+- Confirmed root cause:
+  - There is no email delivery implementation in backend forgot-password flow.
+  - Also no dedicated "Resend code" button/flow in `client/login/login.html`; only a single `Send Reset Code` action.
 
--   File: client/dashboard.html
--   There is a literal comment `Recent Activity & Chart placeholder` even though that section now shows a table.
--   Resolved by replacing the placeholder comment with an accurate section label.
--   Result: dashboard markup no longer carries misleading placeholder wording.
+### B) "Whole website is not responsive to mobile"
+- Confirmed root causes:
+  - Corrupted global stylesheet (`client/style.css`) causing parser issues and inconsistent rule application.
+  - Heavy inline fixed-width layout usage in multiple pages with limited centralized breakpoint coverage.
 
-### ~~15. Notification badge logic exists without matching markup~~
+---
 
--   File: client/script.js
--   File: client/emp.html
--   File: client/attendance.html
--   `updateNotificationBell()` looks for `#bellBadge`.
--   There is no `bellBadge` element in the current HTML files.
--   Resolved by removing the notification bell UI from page headers and deleting notification badge update logic.
--   Result: the app no longer ships unused notification feature code or dead UI controls.
+## Recommended Fix Order
 
-## Data presentation inconsistencies
+1. Repair/replace corrupted section of `client/style.css` (highest impact for global UI/mobile).
+2. Implement real email sending for forgot/reset flow (SMTP/nodemailer/provider API) and optional resend endpoint.
+3. Refactor `calculateLOP` to be idempotent and separate read vs write paths.
+4. Fix employee calendar month navigation and date-selection interactions in active dashboard path.
+5. Patch security and data-shape issues (`/api/users` field projection, `/api/leaves` populate, salary update validation).
+6. Replace inline width-heavy layout with reusable responsive classes.
 
-### ~~16. Recent Hirings table headers do not match rendered data~~
+---
 
--   File: client/dashboard.html
--   File: client/script.js
--   The dashboard table headers are:
-    -   Employee
-    -   Role
-    -   Department
-    -   Status
--   The JS actually renders:
-    -   Employee
-    -   Department
-    -   Role
-    -   Join Date
--   Resolved by updating the dashboard table header order to `Employee`, `Department`, `Role`, `Join Date`.
--   Result: column headings now line up with rendered values.
+## Notes
 
-### ~~17. Attendance colors and legend semantics are inconsistent~~
-
--   File: client/dashboard.html
--   File: client/script.js
--   The current legend uses a generic `Leave` label while the calendar only colors approved leave.
--   `late` is shown using the same color as present, but the legend does not explain that.
--   `half-day` exists in attendance records and tables but is not represented in the employee calendar legend.
--   Resolved by updating the legend label to `Present / Late`, adding a dedicated `Half Day` legend entry, and rendering half-day days with a distinct visual style on the calendar.
--   Result: calendar status colors and legend semantics are consistent and interpretable.
-
-### ~~18. Timezone-sensitive date handling is inconsistent across the app~~
-
--   File: client/script.js
--   Several places convert stored `YYYY-MM-DD` strings via `new Date(...).toISOString().split('T')[0]`.
--   This can shift dates depending on timezone and browser parsing behavior.
--   Resolved by centralizing date-key normalization in helper utilities (`toDateKey()` + `getTodayDateKey()`) and replacing direct ISO-split conversions in attendance, leave, and dashboard calculations.
--   Result: per-day matching and date-based stats are now consistent across timezones.
-
-### ~~19. Leave page wording is inconsistent for admin vs employee mode~~
-
--   File: client/leave.html
--   File: client/script.js
--   The page starts as a management/admin page in HTML, then JS mutates labels for employees after load.
--   Resolved by changing leave-page heading/subtitle to neutral copy in HTML and removing runtime employee-only text mutation for page/stat labels.
--   Result: initial leave-page wording is consistent before and after role initialization.
-
-## Security and architectural problems
-
-### ~~20. Forgot-password flow exposes the reset code to the client~~
-
--   File: server/server.js
--   File: client/login/login.js
--   The server returns `resetCode` in the API response and logs it to the console.
--   The client then renders the reset code directly in the UI.
--   Resolved by hashing reset codes server-side, removing default reset-code exposure from API/UI, and only allowing code exposure when explicitly enabled via `ALLOW_DEV_RESET_CODE=true`.
--   Result: reset codes are no longer leaked by default while still supporting opt-in local debugging.
-
-### ~~21. Legacy `/create-admin` endpoint is unsafe~~
-
--   File: server/server.js
--   The route is unauthenticated and can create an admin account directly.
--   It also returns the created admin object.
--   Resolved by removing the legacy `/create-admin` route and deleting the unused `admin` model.
--   Result: unauthenticated admin-creation path is no longer present.
-
-### ~~22. API endpoints are called without auth protection from the client~~
-
--   File: client/script.js
--   Most data fetches use plain requests to `/api/users`, `/api/attendance`, and `/api/leaves` without an Authorization header.
--   The backend routes shown here also do not enforce authentication.
--   Resolved by enforcing bearer-token middleware on protected API routes, using `apiFetch()` with auth headers in client data calls, and tightening CORS to local dev + configured frontend origins.
--   Result: endpoint access is authenticated/role-guarded without breaking localhost/live-server workflows.
-
-## UX and maintainability issues
-
-### ~~23. Multiple pages mix static placeholder content with live API data~~
-
--   Files: client/dashboard.html, client/leave.html, client/attendance.html, client/emp.html
--   Some values are loaded from the API, others are hard-coded in the HTML, and others depend on fragile DOM queries.
--   Resolved by standardizing key dashboard, leave, and attendance stat placeholders to explicit `Loading...` copy until API data arrives.
--   Result: stat cards now consistently communicate live loading state instead of mixed static/fake placeholder styles.
-
-### ~~24. Several updates rely on brittle DOM traversal instead of stable IDs~~
-
--   File: client/script.js
--   Example: dashboard stat updates use selectors like `.ph-user-check` and then walk parent and sibling nodes to find target spans.
--   Resolved by removing parent-container traversal in profile logout button injection and relying on stable adjacent-element checks.
--   Dashboard stat updates already use stable element IDs; this keeps updates robust against markup shifts.
--   Result: critical update paths no longer depend on fragile traversal.
-
-### ~~25. Hard-coded API base URLs reduce portability~~
-
--   Files: client/script.js, client/login/login.js
--   The frontend is hard-coded to `http://localhost:5000`.
--   Resolved by replacing hard-coded URLs with runtime API base resolution (`window` override, localStorage/meta config, origin fallback, and file-protocol localhost fallback).
--   Result: frontend API calls now work across local and deployed environments without manual URL edits.
-
-## Recommended fix order
-
-1.  ~~Fix the Add Employee modal markup and bind submission to the form, not inline `form.submit()`.~~ Removed the obsolete Add Employee flow entirely.
-2.  ~~Fix employee leave filtering to use `loggedInUser.id` and populated `_id` consistently.~~ Centralized record matching now handles `id` and `_id` correctly.
-3.  ~~Fix role initialization so stale cached data does not render mixed admin/employee UI.~~ Protected pages now wait for verified role before rendering role-specific sections.
-4.  ~~Remove or replace all hard-coded dashboard and leave stat copy with real calculated values.~~ Dashboard and leave stat copy is now driven by live data/loading states.
-5.  ~~Add real auth enforcement to backend routes and remove the unsafe `/create-admin` route.~~ Protected routes are bearer-token enforced and the legacy admin-creation route has been removed.
-6.  ~~Standardize all date handling on raw `YYYY-MM-DD` strings without timezone conversion.~~ Date-key normalization is centralized via `toDateKey()` and `getTodayDateKey()`.
-7.  ~~Replace or remove all dummy buttons, fake pagination, and dead links.~~ Leave filters/review, employee pagination, and attendance load-more are now functional.
+- JS syntax checks currently pass for `client/script.js` and `server/server.js`.
+- This report focuses on functional and code-level defects visible from the current code state.
