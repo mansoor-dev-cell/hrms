@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Page-level guard for admin-restricted pages
-        const restrictedPages = ['emp.html', 'attendance.html'];
+        const restrictedPages = ['emp.html'];
         if (!isAdmin && restrictedPages.includes(page)) {
             window.location.href = 'dashboard.html';
       return false;
@@ -124,10 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (page === 'attendance.html') {
-            fetchAndDisplayAttendance();
-            populateEmployeeDropdown('attEmployee');
-            const saveBtn = document.getElementById('saveAttendanceBtn');
-            if (saveBtn) saveBtn.addEventListener('click', submitAttendanceRecord);
+          setupAttendancePage(verifiedUser);
         }
 
         if (page === "leave.html") {
@@ -896,22 +893,201 @@ let allAttendanceData = [];
 let filteredAttendanceData = [];
 let attendanceVisibleCount = 0;
 const ATTENDANCE_LOAD_STEP = 10;
+let attendancePolicyCache = null;
+
+function parseDatePrefix(value) {
+  return String(value || "").split("T")[0];
+}
+
+function setAttendanceFeedback(el, message, isError = false) {
+  if (!el) return;
+  el.textContent = message;
+  el.style.color = isError ? 'var(--danger)' : 'var(--success)';
+}
+
+function updateSelfMarkTimeDisplay() {
+  const timeEl = document.getElementById('selfMarkCurrentTime');
+  if (!timeEl) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  timeEl.textContent = `System time: ${hh}:${mm}`;
+}
+
+function updateDashboardSelfMarkTimeDisplay() {
+  const timeEl = document.getElementById('dashSelfMarkCurrentTime');
+  if (!timeEl) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  timeEl.textContent = `System time: ${hh}:${mm}`;
+}
+
+function getSelfAttendanceContext() {
+  const pageBtn = document.getElementById('markSelfAttendanceBtn');
+  if (pageBtn) {
+    return {
+      button: pageBtn,
+      feedback: document.getElementById('selfAttendanceFeedback'),
+      notesInput: document.getElementById('selfAttendanceNotes'),
+      dateInput: document.getElementById('selfAttendanceDate'),
+      mode: 'attendance-page',
+    };
+  }
+
+  const dashBtn = document.getElementById('dashMarkSelfAttendanceBtn');
+  if (dashBtn) {
+    return {
+      button: dashBtn,
+      feedback: document.getElementById('dashSelfAttendanceFeedback'),
+      notesInput: document.getElementById('dashSelfAttendanceNotes'),
+      dateInput: document.getElementById('dashSelfAttendanceDate'),
+      mode: 'dashboard',
+    };
+  }
+
+  return null;
+}
+
+function getBrowserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported in this browser.'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+      },
+      (error) => {
+        if (error && error.code === error.PERMISSION_DENIED) {
+          reject(new Error('Location permission denied.'));
+          return;
+        }
+        if (error && error.code === error.TIMEOUT) {
+          reject(new Error('Location request timed out.'));
+          return;
+        }
+        if (error && error.code === error.POSITION_UNAVAILABLE) {
+          reject(new Error('Location unavailable.'));
+          return;
+        }
+        reject(new Error(error?.message || 'Unable to fetch location.'));
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  });
+}
+
+async function fetchAttendancePolicy() {
+  try {
+    const res = await apiFetch('/api/attendance/policy');
+    if (!res.ok) return null;
+    const data = await res.json();
+    attendancePolicyCache = data;
+    return data;
+  } catch (error) {
+    console.error('Unable to fetch attendance policy:', error);
+    return null;
+  }
+}
+
+async function setupAttendancePage(user) {
+  const isAdmin = isAdminRole(user);
+
+  const dateFilterEl = document.getElementById('attDateFilter');
+  const modalDateEl = document.getElementById('attDate');
+  const selfDateEl = document.getElementById('selfAttendanceDate');
+  const todayStr = getTodayDateKey();
+
+  if (dateFilterEl && !dateFilterEl.value) dateFilterEl.value = todayStr;
+  if (modalDateEl && !modalDateEl.value) modalDateEl.value = todayStr;
+  if (selfDateEl) selfDateEl.value = todayStr;
+  if (selfDateEl) {
+    selfDateEl.min = todayStr;
+    selfDateEl.max = todayStr;
+  }
+
+  updateSelfMarkTimeDisplay();
+  if (!document.body.dataset.selfMarkClockBound) {
+    setInterval(updateSelfMarkTimeDisplay, 30000);
+    document.body.dataset.selfMarkClockBound = 'true';
+  }
+
+  await fetchAttendancePolicy();
+
+  const selfMarkBtn = document.getElementById('markSelfAttendanceBtn');
+  if (selfMarkBtn && !selfMarkBtn.dataset.bound) {
+    selfMarkBtn.addEventListener('click', markSelfAttendance);
+    selfMarkBtn.dataset.bound = 'true';
+  }
+
+  if (isAdmin) {
+    await populateEmployeeDropdown('attEmployee');
+    const saveBtn = document.getElementById('saveAttendanceBtn');
+    if (saveBtn && !saveBtn.dataset.bound) {
+      saveBtn.addEventListener('click', submitAttendanceRecord);
+      saveBtn.dataset.bound = 'true';
+    }
+    await setupAttendancePolicySection();
+  }
+
+  await fetchAndDisplayAttendance();
+}
+
+function setupDashboardSelfAttendancePanel() {
+  const user = getStoredUser();
+  if (!user || isAdminRole(user)) return;
+
+  const context = getSelfAttendanceContext();
+  if (!context || context.mode !== 'dashboard') return;
+
+  const todayStr = getTodayDateKey();
+  if (context.dateInput) {
+    context.dateInput.value = todayStr;
+    context.dateInput.min = todayStr;
+    context.dateInput.max = todayStr;
+  }
+
+  updateDashboardSelfMarkTimeDisplay();
+  if (!document.body.dataset.dashSelfMarkClockBound) {
+    setInterval(updateDashboardSelfMarkTimeDisplay, 30000);
+    document.body.dataset.dashSelfMarkClockBound = 'true';
+  }
+
+  if (context.button && !context.button.dataset.bound) {
+    context.button.addEventListener('click', markSelfAttendance);
+    context.button.dataset.bound = 'true';
+  }
+}
 
 async function fetchAndDisplayAttendance() {
     const tbody = document.getElementById('attendanceTableBody');
     if (!tbody) return;
 
     try {
-        const [usersResponse, attendanceResponse] = await Promise.all([
-          apiFetch("/api/users"),
-          apiFetch("/api/attendance"),
-        ]);
+        const currentUser = getStoredUser();
+        const isAdmin = isAdminRole(currentUser);
 
-        if (!usersResponse.ok || !attendanceResponse.ok) {
+        const attendanceResponse = await apiFetch('/api/attendance');
+        if (!attendanceResponse.ok) {
             throw new Error('Failed to fetch attendance data');
         }
 
-        const users = await usersResponse.json();
+        let totalEmployees = 1;
+        if (isAdmin) {
+          const usersResponse = await apiFetch('/api/users');
+          if (usersResponse.ok) {
+            const users = await usersResponse.json();
+            totalEmployees = Array.isArray(users) ? users.length : 0;
+          }
+        }
+
         const records = await attendanceResponse.json();
         allAttendanceData = records;
 
@@ -924,7 +1100,8 @@ async function fetchAndDisplayAttendance() {
 
         records.forEach(r => {
           const recDateStr = toDateKey(r.date);
-            if (recDateStr === todayStr) {
+            const isApproved = String(r.approvalStatus || 'approved') === 'approved';
+            if (recDateStr === todayStr && isApproved) {
                 if (r.status === 'present' || r.status === 'half-day') presentCount++;
                 if (r.status === 'absent') absentCount++;
                 if (r.status === 'late') lateCount++;
@@ -938,21 +1115,16 @@ async function fetchAndDisplayAttendance() {
         const elLate = document.getElementById('attLateArrivals');
         const presentTodayCount = presentCount + lateCount;
 
-        if (elTotal) elTotal.textContent = users.length;
+        if (elTotal) elTotal.textContent = totalEmployees;
         if (elPresent) elPresent.textContent = presentTodayCount;
         if (elAbsent) elAbsent.textContent = absentCount;
         if (elLate) elLate.textContent = lateCount;
-
-        // Set today's date as default for the filter and modal date inputs
-        const dateFilterEl = document.getElementById('attDateFilter');
-        const modalDateEl = document.getElementById('attDate');
-        if (dateFilterEl && !dateFilterEl.value) dateFilterEl.value = todayStr;
-        if (modalDateEl && !modalDateEl.value) modalDateEl.value = todayStr;
 
         renderAttendanceTable(allAttendanceData);
         setupAttendanceSearch();
         setupAttendanceLoadMore();
 
+        const dateFilterEl = document.getElementById('attDateFilter');
         // Auto-apply today's date filter on first load
         if (dateFilterEl && dateFilterEl.value === todayStr) {
             const todayRecords = allAttendanceData.filter(r => r.date === todayStr);
@@ -960,7 +1132,7 @@ async function fetchAndDisplayAttendance() {
         }
     } catch (error) {
         console.error('Error:', error);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-danger">Failed to load attendance records.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;" class="text-danger">Failed to load attendance records.</td></tr>';
     }
 }
 
@@ -988,7 +1160,7 @@ function renderAttendanceRows() {
 
   if (filteredAttendanceData.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">No attendance records found.</td></tr>';
+      '<tr><td colspan="9" style="text-align: center; padding: 20px;" class="text-muted">No attendance records found.</td></tr>';
     return;
   }
 
@@ -1023,10 +1195,37 @@ function renderAttendanceRows() {
     const statusStr =
       record.status.charAt(0).toUpperCase() + record.status.slice(1);
 
+    const approvalStatus = String(record.approvalStatus || 'approved').toLowerCase();
+    let approvalBadgeClass = 'success';
+    if (approvalStatus === 'pending') approvalBadgeClass = 'warning';
+    if (approvalStatus === 'rejected') approvalBadgeClass = 'danger';
+    const approvalLabel = approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1);
+
+    const locationMatch = record.locationCheck?.isMatch;
+    const distanceMeters = Number(record.locationCheck?.distanceMeters);
+    let locationText = 'Not captured';
+    if (locationMatch === true) {
+      locationText = Number.isFinite(distanceMeters)
+        ? `Matched (${Math.round(distanceMeters)}m)`
+        : 'Matched';
+    } else if (locationMatch === false) {
+      locationText = Number.isFinite(distanceMeters)
+        ? `Outside (${Math.round(distanceMeters)}m)`
+        : 'Outside allowed area';
+    }
+
     const checkInHtml =
       record.checkIn === "--:--"
         ? `<span class="text-muted">--:--</span>`
         : `<span class="${record.status === "late" ? "text-warning" : ""} fw-semibold">${record.checkIn}</span>`;
+
+    let reviewActions = '<span class="text-muted" style="font-size:12px;">-</span>';
+    if (isAdminRole(getStoredUser()) && approvalStatus === 'pending') {
+      reviewActions = `
+        <button class="btn btn-outline" onclick="reviewAttendanceRecord('${record._id}', 'approved')" style="padding: 6px; border: none; color: var(--success); background-color: rgba(16, 185, 129, 0.1); margin-right: 4px;"><i class="ph ph-check" style="font-size: 16px;"></i></button>
+        <button class="btn btn-outline" onclick="reviewAttendanceRecord('${record._id}', 'rejected')" style="padding: 6px; border: none; color: var(--danger); background-color: rgba(239, 68, 68, 0.1);"><i class="ph ph-x" style="font-size: 16px;"></i></button>
+      `;
+    }
 
     const normalizedDept = normalizeDeptSubDept(
       user.department,
@@ -1049,7 +1248,10 @@ function renderAttendanceRows() {
             <td style="vertical-align: middle;">${checkInHtml}</td>
             <td style="vertical-align: middle; ${record.checkOut === "--:--" ? "color: var(--text-muted);" : ""}">${record.checkOut}</td>
             <td style="vertical-align: middle;"><span class="badge badge-${badgeClass}">${statusStr}</span></td>
+            <td style="vertical-align: middle;"><span class="badge badge-${approvalBadgeClass}">${approvalLabel}</span></td>
+            <td style="vertical-align: middle;" class="text-muted">${locationText}</td>
             <td style="vertical-align: middle;" class="text-muted">${record.notes || "-"}</td>
+            <td style="vertical-align: middle;" class="admin-only">${reviewActions}</td>
         `;
     tbody.appendChild(tr);
   });
@@ -1220,6 +1422,198 @@ async function submitAttendanceRecord(e) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Record';
     }
+}
+
+async function reviewAttendanceRecord(recordId, decision) {
+  const allowed = ['approved', 'rejected'];
+  if (!allowed.includes(decision)) return;
+
+  try {
+    const response = await apiFetch(`/api/attendance/${recordId}/review`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to review attendance.');
+    }
+
+    showNotification('success', data.message || 'Attendance review updated.');
+    fetchAndDisplayAttendance();
+  } catch (error) {
+    console.error(error);
+    showNotification('error', error.message || 'Failed to review attendance.');
+  }
+}
+
+window.reviewAttendanceRecord = reviewAttendanceRecord;
+
+async function markSelfAttendance() {
+  const context = getSelfAttendanceContext();
+  if (!context || !context.button) return;
+
+  const { button: btn, feedback, notesInput, dateInput } = context;
+  const notes = notesInput?.value || '';
+  const date = dateInput?.value || getTodayDateKey();
+
+  setLoading(btn, true);
+  let location = null;
+  let locationWarning = '';
+
+  if (feedback) {
+    feedback.style.color = 'var(--text-muted)';
+    feedback.textContent = 'Fetching your location...';
+  }
+
+  try {
+    try {
+      location = await getBrowserLocation();
+    } catch (geoError) {
+      location = null;
+      locationWarning = geoError?.message || 'Could not fetch location.';
+      if (feedback) {
+        feedback.style.color = 'var(--warning)';
+        feedback.textContent = `${locationWarning} Submitting attendance without location.`;
+      }
+    }
+
+    const response = await apiFetch('/api/attendance/mark-self', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, notes, location }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to mark attendance.');
+    }
+
+    const successMessage = data.message || 'Attendance marked successfully.';
+    if (locationWarning) {
+      setAttendanceFeedback(
+        feedback,
+        `${successMessage} Location was not captured; this may require admin review.`,
+        false,
+      );
+    } else {
+      setAttendanceFeedback(feedback, successMessage, false);
+    }
+    const lowered = String(data.message || '').toLowerCase();
+    if (lowered.includes('auto-approved') || lowered.includes('sent for admin approval')) {
+      btn.innerHTML = '<i class="ph ph-clock-counter-clockwise"></i> Mark Check-out';
+    }
+    await fetchAndDisplayAttendance();
+  } catch (error) {
+    console.error(error);
+    setAttendanceFeedback(feedback, error.message || 'Unable to mark attendance.', true);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+function fillAttendancePolicyForm(policy) {
+  if (!policy) return;
+  const officeNameEl = document.getElementById('policyOfficeName');
+  const officeLatEl = document.getElementById('policyOfficeLatitude');
+  const officeLngEl = document.getElementById('policyOfficeLongitude');
+  const radiusEl = document.getElementById('policyRadiusMeters');
+  const lateAfterEl = document.getElementById('policyLateAfter');
+  const enforceEl = document.getElementById('policyLocationEnforced');
+
+  if (officeNameEl) officeNameEl.value = policy.officeName || '';
+  if (officeLatEl) officeLatEl.value = policy.officeLocation?.latitude ?? '';
+  if (officeLngEl) officeLngEl.value = policy.officeLocation?.longitude ?? '';
+  if (radiusEl) radiusEl.value = policy.geofenceRadiusMeters ?? 200;
+  if (lateAfterEl) lateAfterEl.value = policy.lateAfter || '09:30';
+  if (enforceEl) enforceEl.checked = policy.isLocationEnforced !== false;
+}
+
+async function saveAttendancePolicy() {
+  const feedback = document.getElementById('attendancePolicyFeedback');
+  const saveBtn = document.getElementById('saveAttendancePolicyBtn');
+  if (!saveBtn) return;
+
+  const payload = {
+    officeName: document.getElementById('policyOfficeName')?.value || '',
+    officeLatitude: document.getElementById('policyOfficeLatitude')?.value,
+    officeLongitude: document.getElementById('policyOfficeLongitude')?.value,
+    geofenceRadiusMeters: document.getElementById('policyRadiusMeters')?.value,
+    lateAfter: document.getElementById('policyLateAfter')?.value,
+    isLocationEnforced: document.getElementById('policyLocationEnforced')?.checked,
+  };
+
+  setLoading(saveBtn, true);
+  if (feedback) {
+    feedback.style.color = 'var(--text-muted)';
+    feedback.textContent = 'Saving policy...';
+  }
+
+  try {
+    const res = await apiFetch('/api/attendance/policy', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to save attendance policy.');
+    }
+
+    attendancePolicyCache = data.policy || null;
+    setAttendanceFeedback(feedback, data.message || 'Attendance policy saved.', false);
+  } catch (error) {
+    console.error(error);
+    setAttendanceFeedback(feedback, error.message || 'Failed to save policy.', true);
+  } finally {
+    setLoading(saveBtn, false);
+  }
+}
+
+async function setOfficeFromCurrentLocation() {
+  const feedback = document.getElementById('attendancePolicyFeedback');
+  const btn = document.getElementById('setOfficeFromCurrentLocationBtn');
+  if (!btn) return;
+
+  setLoading(btn, true);
+  if (feedback) {
+    feedback.style.color = 'var(--text-muted)';
+    feedback.textContent = 'Fetching current location...';
+  }
+
+  try {
+    const location = await getBrowserLocation();
+    const latEl = document.getElementById('policyOfficeLatitude');
+    const lngEl = document.getElementById('policyOfficeLongitude');
+    if (latEl) latEl.value = String(location.latitude);
+    if (lngEl) lngEl.value = String(location.longitude);
+    setAttendanceFeedback(feedback, 'Office location set from current coordinates. Save policy to apply.', false);
+  } catch (error) {
+    console.error(error);
+    setAttendanceFeedback(feedback, error.message || 'Unable to fetch location.', true);
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+async function setupAttendancePolicySection() {
+  const saveBtn = document.getElementById('saveAttendancePolicyBtn');
+  const currentLocBtn = document.getElementById('setOfficeFromCurrentLocationBtn');
+
+  const policy = attendancePolicyCache || (await fetchAttendancePolicy());
+  fillAttendancePolicyForm(policy);
+
+  if (saveBtn && !saveBtn.dataset.bound) {
+    saveBtn.addEventListener('click', saveAttendancePolicy);
+    saveBtn.dataset.bound = 'true';
+  }
+
+  if (currentLocBtn && !currentLocBtn.dataset.bound) {
+    currentLocBtn.addEventListener('click', setOfficeFromCurrentLocation);
+    currentLocBtn.dataset.bound = 'true';
+  }
 }
 
 let allLeavesData = [];
@@ -2088,6 +2482,8 @@ async function fetchEmployeeDashboardData() {
 async function fetchEmployeeDashboardData() {
     console.log('🎯 fetchEmployeeDashboardData: Starting...');
     try {
+  setupDashboardSelfAttendancePanel();
+
     const [attendanceRes, leavesRes, leaveSummaryRes] = await Promise.all([
             apiFetch("/api/attendance"),
             apiFetch("/api/leaves"),

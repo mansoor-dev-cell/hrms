@@ -11,6 +11,7 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const User = require("./models/user");
 const Attendance = require("./models/attendance");
+const AttendancePolicy = require("./models/attendancePolicy");
 const Leave = require("./models/leave");
 
 const app = express();
@@ -450,13 +451,58 @@ app.patch("/api/users/:id", authenticateToken, requireAdmin, async (req, res) =>
 });
 
 // ── Attendance ─────────────────────────────────────────────
+function formatDateKey(dateValue = new Date()) {
+  const date = new Date(dateValue);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeHHMM(dateValue = new Date()) {
+  const date = new Date(dateValue);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function timeToMinutes(hhmm) {
+  if (!/^\d{2}:\d{2}$/.test(String(hhmm || ""))) return null;
+  const [hh, mm] = String(hhmm).split(":").map(Number);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const r = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return r * c;
+}
+
+async function getOrCreateAttendancePolicy() {
+  const existing = await AttendancePolicy.findOne();
+  if (existing) return existing;
+  return AttendancePolicy.create({});
+}
+
 // GET /api/attendance
 app.get("/api/attendance", authenticateToken, async (req, res) => {
   try {
     const records = await Attendance.find(
       isAdminRole(req.user) ? {} : { employeeId: req.user._id },
     )
-      .populate("employeeId", "name department role")
+      .populate("employeeId", "name department subDepartment role")
+      .populate("approvedBy", "name email")
       .sort({ date: -1, createdAt: -1 });
     res.json(records);
   } catch (err) {
@@ -464,11 +510,203 @@ app.get("/api/attendance", authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/attendance/policy
+app.get("/api/attendance/policy", authenticateToken, async (req, res) => {
+  try {
+    const policy = await getOrCreateAttendancePolicy();
+    const hasLocation =
+      Number.isFinite(Number(policy.officeLocation?.latitude)) &&
+      Number.isFinite(Number(policy.officeLocation?.longitude));
+
+    if (isAdminRole(req.user)) {
+      return res.json(policy);
+    }
+
+    return res.json({
+      officeName: policy.officeName,
+      geofenceRadiusMeters: policy.geofenceRadiusMeters,
+      lateAfter: policy.lateAfter,
+      isLocationEnforced: policy.isLocationEnforced,
+      hasOfficeLocation: hasLocation,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
+// PUT /api/attendance/policy
+app.put("/api/attendance/policy", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const {
+      officeName,
+      officeLatitude,
+      officeLongitude,
+      geofenceRadiusMeters,
+      lateAfter,
+      isLocationEnforced,
+    } = req.body;
+
+    if (lateAfter !== undefined && timeToMinutes(lateAfter) === null) {
+      return res.status(400).json({ message: "lateAfter must be in HH:MM format." });
+    }
+
+    if (
+      geofenceRadiusMeters !== undefined &&
+      (!Number.isFinite(Number(geofenceRadiusMeters)) || Number(geofenceRadiusMeters) < 10)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "geofenceRadiusMeters must be a number >= 10." });
+    }
+
+    const patch = {};
+    if (officeName !== undefined) patch.officeName = String(officeName || "").trim();
+    if (lateAfter !== undefined) patch.lateAfter = String(lateAfter);
+    if (geofenceRadiusMeters !== undefined) {
+      patch.geofenceRadiusMeters = Number(geofenceRadiusMeters);
+    }
+    if (isLocationEnforced !== undefined) {
+      patch.isLocationEnforced = Boolean(isLocationEnforced);
+    }
+    if (officeLatitude !== undefined || officeLongitude !== undefined) {
+      if (!Number.isFinite(Number(officeLatitude)) || !Number.isFinite(Number(officeLongitude))) {
+        return res.status(400).json({ message: "Valid office latitude and longitude are required." });
+      }
+      patch.officeLocation = {
+        latitude: Number(officeLatitude),
+        longitude: Number(officeLongitude),
+      };
+    }
+
+    const existing = await getOrCreateAttendancePolicy();
+    Object.assign(existing, patch);
+    await existing.save();
+
+    return res.json({ message: "Attendance policy updated.", policy: existing });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
+// POST /api/attendance/mark-self
+app.post("/api/attendance/mark-self", authenticateToken, async (req, res) => {
+  try {
+    const { date, notes, location } = req.body;
+    const today = formatDateKey(new Date());
+    const selectedDate = String(date || today);
+
+    if (selectedDate !== today) {
+      return res
+        .status(400)
+        .json({ message: "Self attendance can only be marked for today." });
+    }
+
+    const existing = await Attendance.findOne({
+      employeeId: req.user._id,
+      date: selectedDate,
+    });
+    if (existing) {
+      if (!existing.checkOut || existing.checkOut === "--:--") {
+        existing.checkOut = formatTimeHHMM(new Date());
+        if (String(notes || "").trim()) {
+          const previous = String(existing.notes || "").trim();
+          const suffix = `Checkout note: ${String(notes).trim()}`;
+          existing.notes = previous ? `${previous} | ${suffix}` : suffix;
+        }
+        await existing.save();
+        const populatedExisting = await existing.populate(
+          "employeeId",
+          "name department subDepartment role",
+        );
+
+        return res.status(200).json({
+          message: "Check-out captured for today.",
+          record: populatedExisting,
+        });
+      }
+
+      return res
+        .status(409)
+        .json({ message: "Attendance already fully marked for today." });
+    }
+
+    const policy = await getOrCreateAttendancePolicy();
+    const now = new Date();
+    const markedAtTime = formatTimeHHMM(now);
+    const lateThreshold = timeToMinutes(policy.lateAfter);
+    const nowMinutes = timeToMinutes(markedAtTime);
+    const isLate =
+      Number.isFinite(lateThreshold) && Number.isFinite(nowMinutes)
+        ? nowMinutes > lateThreshold
+        : false;
+
+    const lat = Number(location?.latitude);
+    const lng = Number(location?.longitude);
+    const hasMarkedLocation = Number.isFinite(lat) && Number.isFinite(lng);
+    const officeLat = Number(policy.officeLocation?.latitude);
+    const officeLng = Number(policy.officeLocation?.longitude);
+    const hasOfficeLocation =
+      Number.isFinite(officeLat) && Number.isFinite(officeLng);
+
+    let distanceMeters = null;
+    let locationMatch = null;
+    if (hasMarkedLocation && hasOfficeLocation) {
+      distanceMeters = haversineMeters(lat, lng, officeLat, officeLng);
+      locationMatch = distanceMeters <= Number(policy.geofenceRadiusMeters || 200);
+    }
+
+    const requiresLocation = Boolean(policy.isLocationEnforced);
+    const canAutoApprove =
+      !requiresLocation ||
+      (hasOfficeLocation && hasMarkedLocation && locationMatch === true);
+
+    const record = await Attendance.create({
+      employeeId: req.user._id,
+      date: selectedDate,
+      checkIn: markedAtTime,
+      checkOut: "--:--",
+      status: isLate ? "late" : "present",
+      notes: String(notes || "").trim(),
+      approvalStatus: canAutoApprove ? "approved" : "pending",
+      markedVia: "self",
+      isAutoApproved: canAutoApprove,
+      approvedAt: canAutoApprove ? now : null,
+      markedAtTime,
+      markedLocation: {
+        latitude: hasMarkedLocation ? lat : null,
+        longitude: hasMarkedLocation ? lng : null,
+        accuracy: Number.isFinite(Number(location?.accuracy))
+          ? Number(location.accuracy)
+          : null,
+      },
+      locationCheck: {
+        isMatch: locationMatch,
+        distanceMeters,
+        radiusMeters: Number(policy.geofenceRadiusMeters || 200),
+      },
+    });
+
+    const populated = await record.populate("employeeId", "name department subDepartment role");
+    return res.status(201).json({
+      message: canAutoApprove
+        ? "Attendance marked and auto-approved."
+        : "Attendance marked and sent for admin approval.",
+      record: populated,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error.", error: err.message });
+  }
+});
+
 // POST /api/attendance
 app.post("/api/attendance", authenticateToken, async (req, res) => {
   try {
+    if (!isAdminRole(req.user)) {
+      return res.status(403).json({ message: "Only admins can manually create attendance records." });
+    }
+
     const { employeeId, date, checkIn, checkOut, status, notes } = req.body;
-    const targetEmployeeId = isAdminRole(req.user) ? employeeId : req.user._id;
+    const targetEmployeeId = employeeId;
 
     if (!targetEmployeeId || !date) {
       return res
@@ -485,15 +723,69 @@ app.post("/api/attendance", authenticateToken, async (req, res) => {
         checkOut,
         status,
         notes,
+        approvalStatus: "approved",
+        approvedBy: req.user._id,
+        approvedAt: new Date(),
+        markedVia: "admin",
+        isAutoApproved: false,
+        reviewNotes: "Created/updated manually by admin.",
       },
       { new: true, upsert: true },
-    ).populate("employeeId", "name department role");
+    )
+      .populate("employeeId", "name department subDepartment role")
+      .populate("approvedBy", "name email");
 
     res.status(201).json({ message: "Attendance saved successfully.", record });
   } catch (err) {
     res.status(500).json({ message: "Server error.", error: err.message });
   }
 });
+
+// PUT /api/attendance/:id/review
+app.put(
+  "/api/attendance/:id/review",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { decision, status, reviewNotes, checkIn, checkOut } = req.body;
+      if (!["approved", "rejected"].includes(String(decision || ""))) {
+        return res.status(400).json({ message: "decision must be approved or rejected." });
+      }
+
+      const record = await Attendance.findById(req.params.id);
+      if (!record) {
+        return res.status(404).json({ message: "Attendance record not found." });
+      }
+
+      record.approvalStatus = decision;
+      record.approvedBy = req.user._id;
+      record.approvedAt = new Date();
+      record.reviewNotes = String(reviewNotes || "").trim();
+
+      if (status && ["present", "absent", "late", "half-day"].includes(status)) {
+        record.status = status;
+      }
+
+      if (typeof checkIn === "string" && checkIn.trim()) {
+        record.checkIn = checkIn.trim();
+      }
+      if (typeof checkOut === "string" && checkOut.trim()) {
+        record.checkOut = checkOut.trim();
+      }
+
+      await record.save();
+      const populated = await record.populate([
+        { path: "employeeId", select: "name department subDepartment role" },
+        { path: "approvedBy", select: "name email" },
+      ]);
+
+      return res.json({ message: `Attendance ${decision}.`, record: populated });
+    } catch (err) {
+      return res.status(500).json({ message: "Server error.", error: err.message });
+    }
+  },
+);
 
 // ── Leaves ─────────────────────────────────────────────────
 // GET /api/leaves

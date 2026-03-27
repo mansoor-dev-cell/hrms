@@ -27,7 +27,7 @@
                     <i class="ph ph-users nav-icon"></i>
                     Employees
                 </a>
-                <a href="attendance.html" class="nav-item active admin-only">
+                <a href="attendance.html" class="nav-item active">
                     <i class="ph ph-calendar-check nav-icon"></i>
                     Attendance
                 </a>
@@ -66,7 +66,7 @@
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Attendance Tracking</h1>
-                        <p class="page-subtitle">Monitor and manage daily team attendance records.</p>
+                        <p class="page-subtitle">Self check-in with location validation and admin approval workflow.</p>
                     </div>
                     <div style="display: flex; gap: 12px;">
 
@@ -74,6 +74,74 @@
                             <i class="ph ph-plus"></i>
                             Mark Entry
                         </button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-body" style="padding: 20px 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                            <h3 style="margin: 0; font-size: 16px;">Mark Today's Attendance</h3>
+                            <span class="text-muted" id="selfMarkCurrentTime" style="font-size: 12px;">System time: --:--</span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: end;">
+                            <div class="form-group" style="margin: 0;">
+                                <label for="selfAttendanceDate">Date</label>
+                                <input type="date" class="form-control" id="selfAttendanceDate">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="selfAttendanceNotes">Notes</label>
+                                <input type="text" class="form-control" id="selfAttendanceNotes" placeholder="Optional note">
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-primary" id="markSelfAttendanceBtn">
+                                    <i class="ph ph-map-pin"></i>
+                                    Mark With Current Location
+                                </button>
+                            </div>
+                        </div>
+
+                        <p id="selfAttendanceFeedback" style="margin: 10px 0 0; font-size: 13px;" class="text-muted">Location will be captured from browser GPS.</p>
+                        <p style="margin: 6px 0 0; font-size: 12px;" class="text-muted">Self attendance is allowed only for today. Mark once for check-in and again for check-out.</p>
+                    </div>
+                </div>
+
+                <div class="card admin-only" style="margin-bottom: 24px;">
+                    <div class="card-body" style="padding: 20px 24px;">
+                        <h3 style="margin: 0 0 12px; font-size: 16px;">Attendance Policy (Admin)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: end;">
+                            <div class="form-group" style="margin: 0;">
+                                <label for="policyOfficeName">Office Name</label>
+                                <input type="text" class="form-control" id="policyOfficeName" placeholder="Main Office">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="policyOfficeLatitude">Office Latitude</label>
+                                <input type="number" class="form-control" id="policyOfficeLatitude" step="0.000001" placeholder="12.971599">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="policyOfficeLongitude">Office Longitude</label>
+                                <input type="number" class="form-control" id="policyOfficeLongitude" step="0.000001" placeholder="77.594566">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="policyRadiusMeters">Allowed Radius (meters)</label>
+                                <input type="number" class="form-control" id="policyRadiusMeters" min="10" step="1" value="200">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label for="policyLateAfter">Late After (HH:MM)</label>
+                                <input type="time" class="form-control" id="policyLateAfter" value="09:30">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
+                                    <input type="checkbox" id="policyLocationEnforced" checked>
+                                    Enforce Location Match
+                                </label>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-outline" id="setOfficeFromCurrentLocationBtn">Use My Current Location As Office</button>
+                            <button type="button" class="btn btn-primary" id="saveAttendancePolicyBtn">Save Policy</button>
+                        </div>
+                        <p id="attendancePolicyFeedback" style="margin: 10px 0 0; font-size: 13px;" class="text-muted">Set office location and timing policy for auto approval.</p>
                     </div>
                 </div>
 
@@ -152,12 +220,15 @@
                                     <th>Check In</th>
                                     <th>Check Out</th>
                                     <th>Status</th>
+                                    <th>Approval</th>
+                                    <th>Location</th>
                                     <th>Notes</th>
+                                    <th class="admin-only">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="attendanceTableBody">
                                 <tr>
-                                    <td colspan="6" style="text-align: center; padding: 20px;" class="text-muted">
+                                    <td colspan="9" style="text-align: center; padding: 20px;" class="text-muted">
                                         Loading attendance...</td>
                                 </tr>
                             </tbody>

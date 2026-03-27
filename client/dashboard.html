@@ -194,6 +194,32 @@
                 <!-- ===== EMPLOYEE dashboard content ===== -->
                 <div class="employee-only" style="display:none;">
 
+                            <div class="card" style="margin-bottom: 20px; border-top: 4px solid var(--primary);">
+                                <div class="card-body" style="padding: 18px 20px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+                                        <h3 style="font-size:16px; margin:0;">Mark Today's Attendance</h3>
+                                        <span id="dashSelfMarkCurrentTime" class="text-muted" style="font-size:12px;">System time: --:--</span>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; align-items:end;">
+                                        <div>
+                                            <label for="dashSelfAttendanceDate" class="text-muted" style="font-size:12px; display:block; margin-bottom:6px;">Date</label>
+                                            <input type="date" id="dashSelfAttendanceDate" class="form-control">
+                                        </div>
+                                        <div>
+                                            <label for="dashSelfAttendanceNotes" class="text-muted" style="font-size:12px; display:block; margin-bottom:6px;">Notes</label>
+                                            <input type="text" id="dashSelfAttendanceNotes" class="form-control" placeholder="Optional note">
+                                        </div>
+                                        <div>
+                                            <button type="button" class="btn btn-primary" id="dashMarkSelfAttendanceBtn">
+                                                <i class="ph ph-map-pin"></i>
+                                                Check In / Check Out
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p id="dashSelfAttendanceFeedback" class="text-muted" style="margin: 10px 0 0; font-size: 12px;">You can only mark attendance for today. First click checks in, second click checks out.</p>
+                                </div>
+                            </div>
+
                             <!-- Personal Stats Row -->
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 28px;">
                                 <div class="card" style="border-top: 4px solid var(--primary);">
