@@ -38,6 +38,10 @@ function parseAllowedOrigins() {
 
 const allowedOrigins = parseAllowedOrigins();
 
+const path = require("path");
+
+app.use(express.static(path.join(__dirname, "../client")));
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -263,7 +267,7 @@ mongoose
 
 // ── Health check ───────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.send("HRMS Backend Running");
+  res.sendFile(path.join(__dirname, "../client/login/login.html"));
 });
 
 // ── Register ───────────────────────────────────────────────
